@@ -1,0 +1,50 @@
+{%- set pv = python_versions.split(' ') -%}
+[tool.poetry]
+name = "pytest-tmux"
+version = "{{ version }}"
+description = "A pytest plugin that enables tmux driven tests"
+authors = ["rockandska <yoann_mac_donald@hotmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "pytest_tmux"}]
+classifiers= [
+  'Development Status :: 4 - Beta',
+  'Framework :: Pytest',
+  'Intended Audience :: Developers',
+  'Topic :: Software Development :: Testing',
+  'Programming Language :: Python',
+  {% for v in pv  -%}
+  'Programming Language :: Python :: {{ v }}',
+  {% endfor %}
+  'Operating System :: OS Independent',
+  'License :: OSI Approved :: MIT License',
+]
+
+[tool.poetry.dependencies]
+python = ">={{ pv[0] }}, <= {{ pv [-1] }}.9999"
+libtmux = "0.16"
+
+[tool.poetry.group.test.dependencies]
+pytest = ">=3.5"
+
+[tool.poetry.group.format.dependencies]
+black = "*"
+isort = "*"
+
+[tool.poetry.group.lint.dependencies]
+flake8 = "*"
+flake8-bugbear = "*"
+flake8-comprehensions = "*"
+mypy = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.plugins.pytest11]
+pytest-tmux = "pytest_tmux.plugin"
+
+[tool.mypy]
+exclude = [
+    '^pytest_tmux/subrepo'
+]

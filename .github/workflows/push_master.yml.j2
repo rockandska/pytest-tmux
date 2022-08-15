@@ -1,0 +1,70 @@
+{% raw %}
+name: On push master
+on:
+  push:
+    branches:
+      - 'master'
+env:
+  TERM: xterm-256color
+concurrency:
+  group: ${{ github.head_ref || github.ref_name }}
+{% endraw %}
+jobs:
+  Tests:
+{% include 'tests.j2.inc' %}
+  Release:
+    needs: Tests
+    runs-on: ubuntu-18.04
+{%- raw %}
+    if:
+      contains(github.event.head_commit.message, '[make release]')
+{% endraw %}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: {{ base_python_version }}
+      - name: Configure git
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: make release
+        run: make release
+      - name: Push back CHANGELOG and tag
+        run: git push --follow-tags
+      - name: Create GH release
+        run: make release-gh
+{%- raw %}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: make publish
+        run: make publish
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+{% endraw %}
+  Changelog:
+    needs: Tests
+    runs-on: ubuntu-18.04
+{%- raw %}
+    if: |
+      always() && ! contains(github.event.head_commit.message, '[make release]')
+{% endraw %}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure git
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: {{ base_python_version }}
+      - name: make CHANGELOG.md
+        run: make CHANGELOG.md
+      - name: Push back CHANGELOG
+        run: git push

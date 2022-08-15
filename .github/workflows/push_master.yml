@@ -1,0 +1,131 @@
+
+name: On push master
+on:
+  push:
+    branches:
+      - 'master'
+env:
+  TERM: xterm-256color
+concurrency:
+  group: ${{ github.head_ref || github.ref_name }}
+
+jobs:
+  Tests:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        target:
+          - test-tox-black
+          - test-tox-isort
+          - test-tox-flake8
+          - test-tox-mypy
+          - test-tox-python3.7
+          - test-tox-python3.8
+          - test-tox-python3.9
+          - test-tox-python3.10
+          - test-tox-python3.11
+          
+        include:
+          - target: test-tox-black
+            python-version: |
+              3.7
+          - target: test-tox-isort
+            python-version: |
+              3.7
+          - target: test-tox-flake8
+            python-version: |
+              3.7
+          - target: test-tox-mypy
+            python-version: |
+              3.7
+          - target: test-tox-python3.7
+            python-version: |
+              3.7
+              3.7
+          - target: test-tox-python3.8
+            python-version: |
+              3.7
+              3.8
+          - target: test-tox-python3.9
+            python-version: |
+              3.7
+              3.9
+          - target: test-tox-python3.10
+            python-version: |
+              3.7
+              3.10
+          - target: test-tox-python3.11
+            python-version: |
+              3.7
+              3.11
+          
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: |
+            ${{ matrix.python-version }}
+      - name: Install Tmux
+        if: contains(matrix.target, 'python')
+        run: |
+          sudo apt-get install tmux
+      - name: make ${{matrix.target}}
+        run: make ${{matrix.target}}
+      - name: Check that workingtree is still clean
+        run: make check-git-clean
+
+
+  Release:
+    needs: Tests
+    runs-on: ubuntu-18.04
+    if:
+      contains(github.event.head_commit.message, '[make release]')
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.7
+      - name: Configure git
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: make release
+        run: make release
+      - name: Push back CHANGELOG and tag
+        run: git push --follow-tags
+      - name: Create GH release
+        run: make release-gh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: make publish
+        run: make publish
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+
+  Changelog:
+    needs: Tests
+    runs-on: ubuntu-18.04
+    if: |
+      always() && ! contains(github.event.head_commit.message, '[make release]')
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure git
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.7
+      - name: make CHANGELOG.md
+        run: make CHANGELOG.md
+      - name: Push back CHANGELOG
+        run: git push

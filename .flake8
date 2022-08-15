@@ -1,0 +1,3 @@
+[flake8]
+exclude = pytest_tmux/subrepo
+max-line-length = 160
