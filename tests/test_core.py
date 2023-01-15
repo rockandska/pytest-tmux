@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-def test_send_keys(testdir, options):
+def test_send_keys(pytester):
     src = r'''
         import pytest
         from inspect import cleandoc
@@ -14,7 +14,7 @@ def test_send_keys(testdir, options):
             assert tmux.screen() == cleandoc(expected)
     '''
 
-    testdir.makepyfile(src)
-    result = testdir.runpytest("-vv", "-s")
+    pytester.makepyfile(src)
+    result = pytester.runpytest("-vv", "-s")
 
     assert result.ret == 0

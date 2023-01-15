@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-def test_assert_screen(testdir, options):
+def test_assert_screen(pytester):
 
     src = r'''
         import pytest
@@ -20,7 +20,7 @@ def test_assert_screen(testdir, options):
             assert tmux.screen() == cleandoc(expected)
     '''
 
-    testdir.makepyfile(src)
-    result = testdir.runpytest("-vv", "-s")
+    pytester.makepyfile(src)
+    result = pytester.runpytest("-vv", "-s")
 
     assert result.ret == 0
