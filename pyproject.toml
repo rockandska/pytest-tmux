@@ -24,7 +24,7 @@ classifiers= [
 
 [tool.poetry.dependencies]
 python = ">=3.7, <= 3.11.9999"
-libtmux = "0.16"
+libtmux = "0.20"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=3.5"

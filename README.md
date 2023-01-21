@@ -19,7 +19,6 @@ A pytest plugin that enables tmux driven tests
 ## Requirements
 
 - python >= 3.7
-- python libtmux==0.16
 - pytest
 - tmux
 
