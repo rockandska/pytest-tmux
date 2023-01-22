@@ -34,14 +34,27 @@ from [PyPI](https://pypi.org/project):
 This plugin is intend to help users who whant to test interrative cli.
 When using `tmux` fixture it basically :
 - create a tmux server (socket create in tmux tmpdir)
-- create a session automatically when requested with name based on the name of test file
-- create a window automatically when requested with name based on the name of the test
+- create a session automatically when needed with an automatic name
+- create a window automatically when needed with an automatic name
 
-Configuration could be set on different level :
-- cli args (see --tmux-* switch with pytest --help)
-- at the test level with tmux_cfg marker
-- dynamically inside test with `tmux.set()`
-- using `tmux.screen() / tmux.row()` (timeout / delay)
+Configuration could be set on different level (in order of precedence):
+- Server
+    - by overriding tmux_server_config (scope='session') fixture
+    - env var
+    - cli args (see --tmux-* switch with pytest --help)
+- Session
+    - by overriding tmux_session_config fixture
+    - at the test level with tmux_session_cfg marker
+    - dynamically inside test with `tmux.config.session`
+    - env var
+    - cli args (see --tmux-* switch with pytest --help)
+- Assertion
+    - by overriding tmux_assertion_config fixture
+    - at the test level with tmux_assertion_cfg marker
+    - dynamically inside test with `tmux.config.session`
+    - when calling `tmux.screen() / tmux.row()` with `timeout` / `delay` argument
+    - env var
+    - cli args (see --tmux-* switch with pytest --help)
 
 
 ## Usage
@@ -57,7 +70,7 @@ from inspect import cleandoc
 
 def test_assert(tmux):
     # Set some options before session / windows is started
-    tmux.set(window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile')
+    tmux.config.session.window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile'
     assert tmux.screen() == '$'
     tmux.send_keys(r'printf "  Hello World  .\n\n"')
     expected=r"""
@@ -78,7 +91,7 @@ from inspect import cleandoc
 
 def test_assert(tmux):
     # Set some options before session / windows is started
-    tmux.set(window_command='env -i PS1="# " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile')
+    tmux.config.session.window_command='env -i PS1="# " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile'
     assert tmux.row(0) == '$'
 ```
 
@@ -104,7 +117,7 @@ from inspect import cleandoc
 
 def test_assert(tmux):
     # Set some options before session / windows is started
-    tmux.set(window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile')
+    tmux.config.session.window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile'
     assert tmux.row(0) == '$'
     tmux.send_keys('sleep 5')
     assert tmux.row(0) == '$ sleep 5'
@@ -121,8 +134,10 @@ If needed, a debug mode is available with `--tmux-debug`.
 It will prompt you to :
 - open the tmux session for the current test
 - press enter to continue on :
-    - send_keys
-    - kill_session
+    - when calling `tmux.send_keys()`
+    - when calling `tmux.screen()`
+    - when calling `tmux.row()`
+    - when the session is killed
 
 ## Contributing
 

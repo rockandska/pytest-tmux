@@ -5,7 +5,7 @@ def test_send_keys(pytester):
         from inspect import cleandoc
 
         def test_send_keys(tmux):
-            tmux.set(window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile')
+            tmux.config.session.window_command = 'env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile'
             assert tmux.screen() == '$'
             tmux.send_keys('ls', enter=False)
             expected=r"""

@@ -31,7 +31,12 @@ def retry(func=None, *, timeout=None, delay=None):
 
 
 class TmuxOutput(object):
-    def __init__(self, func, timeout=None, delay=None):
+    def __init__(
+        self,
+        func,
+        timeout=None,
+        delay=None,
+    ):
         self.func = func
         self.value = self.func()
         self.__timeout = timeout

@@ -17,6 +17,7 @@ def test_help_message(testdir):
             "  --tmux-window-command=TMUX_WINDOW_COMMAND",
             "  --tmux-window-width=TMUX_WINDOW_WIDTH",
             "  --tmux-window-height=TMUX_WINDOW_HEIGHT",
-            "  --tmux-assert-timeout=TMUX_ASSERT_TIMEOUT",
+            "  --tmux-assertion-timeout=TMUX_ASSERTION_TIMEOUT",
+            "  --tmux-assertion-delay=TMUX_ASSERTION_DELAY",
         ]
     )
