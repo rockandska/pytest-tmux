@@ -267,12 +267,12 @@ tox.ini: tox.ini.j2 .python-version
 	$(info ### Generating $@ from $<... ###)
 	jinja2 -o $@ $< -D base_python_version="$(BASE_PYTHON_VERSION)" -D python_versions="$(PYTHON_VERSIONS)"
 
-pyproject.toml: pyproject.toml.j2 .python-version .VERSION
+pyproject.toml: pyproject.toml.j2 .FORCE
 	$(info ### Generating $@ from $<... ###)
 	CURRENT_VERSION=$$(<".VERSION")
 	jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
 
-$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .python-version
+$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE
 	$(info ### Generating $@ from $<... ###)
 	mkdir -p $(@D)
 	jinja2 -o $@ $< -D tox_targets="$(TEST_TOX_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
