@@ -24,12 +24,21 @@ classifiers= [
 python = ">={{ pv[0] }}, <= {{ pv [-1] }}.9999"
 libtmux = "0.20"
 
+[tool.poetry.group.test]
+optional = true
+
 [tool.poetry.group.test.dependencies]
 pytest = ">=3.5"
+
+[tool.poetry.group.format]
+optional = true
 
 [tool.poetry.group.format.dependencies]
 black = "*"
 isort = "*"
+
+[tool.poetry.group.lint]
+optional = true
 
 [tool.poetry.group.lint.dependencies]
 flake8 = "*"
