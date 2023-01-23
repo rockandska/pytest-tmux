@@ -6,7 +6,12 @@ from pytest_tmux.client import TmuxClient
 @pytest.fixture(scope="session")
 def tmux_server_config():
     """
-    Fixture used to override default configuration for libtmux.Server
+    Fixture intended to be override by the user to update default tmux server config
+
+    Scope : session
+
+    Returns:
+        a dictionnary containing args for libtmux.server.Server
     """
     return {}
 
@@ -14,7 +19,13 @@ def tmux_server_config():
 @pytest.fixture()
 def tmux_session_config():
     """
-    Fixture used to override default configuration for libtmux.Server.new_session
+    Fixture intended to be override by the user to update default tmux session
+    config.
+
+    Scope: function
+
+    Returns:
+        a dictionnary containing args for libtmux.server.Server.new_session()
     """
     return {}
 
@@ -22,13 +33,29 @@ def tmux_session_config():
 @pytest.fixture()
 def tmux_assertion_config():
     """
-    Fixture used to override default configuration for pytest_tmux.output.TmuxOutput
+    Fixture intended to be override by the user to update default tmux assertion config
+
+    Scope: function
+
+    Returns:
+        a dictionnary containing args for :
+
+          - pytest_tmux.client.TmuxClient.screen()
+          - pytest_tmux.client.TmuxClient.row()
     """
     return {}
 
 
 @pytest.fixture(scope="session")
 def _tmux_server(tmpdir_factory, request, pytestconfig, tmux_server_config):
+    """
+    Fixture used to create a server for the whole session
+
+    Scope: function
+
+    Returns:
+        A [pytest_tmux.client.TmuxClient][pytest_tmux.client.TmuxClient] object
+    """
 
     tmux_server = TmuxClient(
         tmpdir_factory=tmpdir_factory,
@@ -52,6 +79,14 @@ def tmux(
     tmux_session_config,
     tmux_assertion_config,
 ):
+    """
+    Fixture intended to be used with tmux tests
+
+    Scope: function
+
+    Returns:
+        A [pytest_tmux.client.TmuxClient][pytest_tmux.client.TmuxClient] object
+    """
 
     tmux_client = TmuxClient(
         request=request,

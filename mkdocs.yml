@@ -1,0 +1,34 @@
+site_name: Pytest-tmux
+
+theme:
+  name: "material"
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: yes
+            merge_init_into_class: yes
+            show_submodules: no
+  - gen-files:
+      scripts:
+        - docs/gen_ref_nav.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - autorefs
+
+watch:
+  - pytest_tmux/
+
+nav:
+  - Index: index.md
+  - Examples: examples.md
+  - Interactive Debug: debug.md
+  - API: reference/
+  - Conribute: contribute.md
+  - Thanks: thanks.md

@@ -7,6 +7,29 @@ from pytest_tmux.output import TmuxOutput
 
 
 class TmuxClient:
+    """
+    When instantiated:
+        - create/stores link to :
+            - libtmux.server.Server instance
+            - libtmux.session.Session instance
+            - libtmux.window.Window instance
+            - libtmux.pane.Pane instance
+        - create some methods specific to pytest-tmux
+        - create a [pytest_tmux.config.TmuxConfig][pytest_tmux.config.TmuxConfig] instance
+
+    Args:
+        request: a pytest request fixture object
+        pytestconfig: a pytest pytestconfig fixture object
+        tmpdir_factory: a pytest tmpdir_factory fixture object
+        server: a libtmux.server.server object
+        server_cfg_fixture: a server config dictionary
+        session_cfg_fixture: a session config dictionary
+        assertion_cfg_fixture: a assertion config dictionary
+
+    Returns:
+        A [pytest_tmux.client.TmuxClient][pytest_tmux.client.TmuxClient] object
+    """
+
     def __init__(
         self,
         request=None,
@@ -61,6 +84,16 @@ class TmuxClient:
                 pass
 
     def debug(self, msg=None):
+        """
+        Display a message and ask to press enter when pytest-tmux debug is
+        activated.
+
+        On first call, display a command who let the user been attached to the
+        test session.
+
+        Args:
+            msg:    The message to display
+        """
         if self.config.plugin.debug:
             if self._debug is None:
                 with self.suspend_capture(self._request):
@@ -97,6 +130,14 @@ class TmuxClient:
 
     @property
     def session(self):
+        """
+        A direct link to libtmux.session.Session created for the actual test.
+
+        The object is created on the first call who need it.
+
+        Returns:
+            a libtmux.session.Session object
+        """
         if self._session is None:
             self._session = self.server.new_session(**self.config.session)
             self.sessions += 1
@@ -105,12 +146,28 @@ class TmuxClient:
 
     @property
     def window(self):
+        """
+        A direct link to libtmux.window.Window created for the actual test.
+
+        The object is created on the first call who need it.
+
+        Returns:
+            a libtmux.window.Window object
+        """
         if self._window is None:
             self._window = self.session.attached_window
         return self._window
 
     @property
     def pane(self):
+        """
+        A direct link to libtmux.pane.Pane created for the actual test.
+
+        The object is created on the first call who need it.
+
+        Returns:
+            a libtmux.pane.Pane object
+        """
         if self._pane is None:
             self._pane = self.window.attached_pane
 
@@ -118,14 +175,33 @@ class TmuxClient:
 
     @property
     def server(self):
+        """
+        A direct link to libtmux.server.Server created for the actual test
+        session.
+
+        The object is created on the first call who need it.
+
+        Returns:
+            a libtmux.server.Server object
+        """
         if self._server is None:
             self._server = Server(**self.config.server)
         return self._server
 
     def clear(self):
+        """
+        Shortcut for libtmux.pane.Pane.clear()
+        """
         self.pane.clear()
 
     def send_keys(self, cmd=None, **kwargs):
+        """
+        Send commands to the actual pane
+
+        Args:
+            cmd: Text or input into pane
+            kwargs: every arguments accepted by libtmux.pane.Pane.send_keys()
+        """
         if "supress_history" not in kwargs:
             kwargs["suppress_history"] = False
         self.debug(
@@ -138,6 +214,16 @@ class TmuxClient:
         self.pane.send_keys(cmd, **kwargs)
 
     def screen(self, timeout=None, delay=None):
+        """
+        Get screen content from pane with retry capability on operators
+
+        Args:
+            timeout: how long to wait for the assertion to failed
+            delay: how long before retrying the assertion
+
+        Returns:
+            a [TmuxOutput][pytest_tmux.output.TmuxOutput] instance
+        """
 
         if timeout is None:
             timeout = self.config.assertion.timeout
@@ -156,6 +242,17 @@ class TmuxClient:
         return TmuxOutput(_capture, timeout=timeout, delay=delay)
 
     def row(self, row, timeout=None, delay=None):
+        """
+        Get row content from pane with retry capability on operators
+
+        Args:
+            row: which row from libtmux.pane.Pane.capture_pane to set in [TmuxOutput][pytest_tmux.output.TmuxOutput]
+            timeout: how long to wait for the assertion to failed
+            delay: how long before retrying the assertion
+
+        Returns:
+            a [TmuxOutput][pytest_tmux.output.TmuxOutput] instance
+        """
         if not isinstance(row, int):
             raise TypeError("row should be an integer")
 

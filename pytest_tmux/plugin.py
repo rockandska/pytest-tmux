@@ -14,7 +14,6 @@ from pytest_tmux.rewrite import tmux_rewrite
 
 
 def pytest_addoption(parser):
-    """Add options to control tmux tests"""
     group = parser.getgroup("tmux")
     group.addoption(
         "--tmux-debug",

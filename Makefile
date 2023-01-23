@@ -102,7 +102,7 @@ $(VENV_DIR)/tox-env.mk: tox.ini | venv
 	EOF
 
 .PHONY: test
-test: $(TESTS_TARGETS)
+test: $(TESTS_TARGETS) docs build
 
 .PHONY: $(TEST_TOX_TARGETS)
 $(TEST_TOX_TARGETS): TOX_ENV = $(subst $(TEST_TOX_TARGETS_PREFIX)-,,$(@))
@@ -257,6 +257,18 @@ check-git-clean:
 		1>&2 echo "Git workingtree is not clean"
 		exit 1
 	fi
+
+.PHONY: docs-serve
+docs-serve: pyproject.toml
+	$(VENV_DIR)/bin/poetry lock --check
+	$(VENV_DIR)/bin/poetry install --only docs
+	$(VENV_DIR)/bin/poetry run mkdocs serve
+
+.PHONY: docs
+docs: pyproject.toml
+	$(VENV_DIR)/bin/poetry lock --check
+	$(VENV_DIR)/bin/poetry install --only docs
+	$(VENV_DIR)/bin/poetry run mkdocs build
 
 
 ##############

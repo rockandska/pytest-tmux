@@ -31,6 +31,18 @@ def retry(func=None, *, timeout=None, delay=None):
 
 
 class TmuxOutput(object):
+    """
+    Sucharge some operator to add @retry property
+
+    Args:
+        func: function used to get the value to use when required
+        timeout: how long to wait for the operator call to fail
+        delay: how long before retrying the operator call
+
+    Returns:
+        a [TmuxOutput][pytest_tmux.output.TmuxOutput] instance
+    """
+
     def __init__(
         self,
         func,

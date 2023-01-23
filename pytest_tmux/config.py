@@ -2,6 +2,24 @@ from collections.abc import Mapping
 
 
 class TmuxConfig(Mapping):
+    """
+    Create a config instance.
+
+    Args:
+        request: a pytest request fixture object
+        pytestconfig: a pytest pytestconfig fixture object
+        tmpdir_factory: a pytest tmpdir_factory fixture object
+        server_cfg_fixture: a server config dictionary
+        session_cfg_fixture: a session config dictionary
+        assertion_cfg_fixture: a assertion config dictionary
+
+    Attributes:
+        server: a [TmuxConfigServer][pytest_tmux.config.TmuxConfigServer] instance
+        session: a [TmuxConfigSession][pytest_tmux.config.TmuxConfigSession] instance
+        assertion: a [TmuxConfigAssert][pytest_tmux.config.TmuxConfigAssert] instance
+        plugin: a [TmuxConfigPlugin][pytest_tmux.config.TmuxConfigPlugin] instance
+    """
+
     def __init__(
         self,
         request=None,
@@ -66,6 +84,25 @@ class TmuxConfig(Mapping):
 
 
 class TmuxConfigServer(TmuxConfig):
+    """
+    Display config value by loading settings from:
+        - default
+        - [tmux_server_config][pytest_tmux.fixtures.tmux_server_config] fixture
+        - env
+        - cmd args
+
+    Args:
+        request: a pytest request fixture object
+        pytestconfig: a pytest pytestconfig fixture object
+        tmpdir_factory: a pytest tmpdir_factory fixture object
+        server_cfg_fixture: a server config dictionary
+        session_cfg_fixture: a session config dictionary
+        assertion_cfg_fixture: a assertion config dictionary
+
+    Attributes:
+        **args: All args accepted by libtmux.server.Server()
+    """
+
     def _default(self):
         self._config.update(
             {"socket_path": str(self._tmpdir_factory.getbasetemp() + "/tmux.socket")}
@@ -87,6 +124,24 @@ class TmuxConfigServer(TmuxConfig):
 
 
 class TmuxConfigSession(TmuxConfig):
+    """
+    Display config value by loading settings from:
+        - default
+        - [tmux_session_config][pytest_tmux.fixtures.tmux_session_config] fixture
+        - tmux_session_cfg marker
+        - tmux.config.session.[attribute] set in tests
+        - env
+        - cmd args
+
+    Args:
+        request: a pytest request fixture object
+        pytestconfig: a pytest pytestconfig fixture object
+        session_cfg_fixture: a session config dictionary
+
+    Attributes:
+        **attrs: All args accepted by libtmux.server.Server.new_session()
+    """
+
     def _default(self):
         __test_file_name = "".join(
             [c if c.isalnum() else "_" for c in self._request.module.__name__]
@@ -124,6 +179,27 @@ class TmuxConfigSession(TmuxConfig):
 
 
 class TmuxConfigAssert(TmuxConfig):
+    """
+    Display config value by loading settings from:
+        - default
+        - [tmux_assertion_config][pytest_tmux.fixtures.tmux_assertion_config] fixture
+        - tmux_assertion_cfg marker
+        - tmux.config.assertion.[attribute] set in tests
+        - env
+        - cmd args
+
+    Args:
+        request: a pytest request fixture object
+        pytestconfig: a pytest pytestconfig fixture object
+        assertion_cfg_fixture: a assertion config dictionary
+
+    Attributes:
+        **attrs: All args accepted by :
+
+          - [pytest_tmux.client.TmuxClient.screen][pytest_tmux.client.TmuxClient.screen]
+          - [pytest_tmux.client.TmuxClient.row][pytest_tmux.client.TmuxClient.row]
+    """
+
     def _default(self):
         self._config.update({"timeout": 2, "delay": 0.5})
         self._config.update(self._assertion_cfg_fixture or {})
@@ -142,6 +218,21 @@ class TmuxConfigAssert(TmuxConfig):
 
 
 class TmuxConfigPlugin(TmuxConfig):
+    """
+    Display config value by loading settings from:
+        - default
+        - tmux.config.plugin.[attribute] set in tests
+        - env
+        - cmd args
+
+    Args:
+        request: a pytest request fixture object
+        pytestconfig: a pytest pytestconfig fixture object
+
+    Attributes:
+        debug (bool):  pytest-tmux debug setting
+    """
+
     def _default(self):
         self._config.update({"debug": False})
 
