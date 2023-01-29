@@ -1,7 +1,14 @@
-from collections.abc import Mapping
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Mapping
+
+if TYPE_CHECKING:
+    from typing import Any, Dict, Iterator, Optional, Union
+
+    import pytest
 
 
-class TmuxConfig(Mapping):
+class TmuxConfig(Mapping[str, str]):
     """
     Create a config instance.
 
@@ -22,13 +29,13 @@ class TmuxConfig(Mapping):
 
     def __init__(
         self,
-        request=None,
-        pytestconfig=None,
-        tmpdir_factory=None,
-        server_cfg_fixture=None,
-        session_cfg_fixture=None,
-        assertion_cfg_fixture=None,
-    ):
+        request: Optional[pytest.FixtureRequest] = None,
+        pytestconfig: Optional[pytest.Config] = None,
+        tmpdir_factory: Optional[pytest.TempdirFactory] = None,
+        server_cfg_fixture: Optional[Dict[str, Union[str, int]]] = None,
+        session_cfg_fixture: Optional[Dict[str, Union[str, int]]] = None,
+        assertion_cfg_fixture: Optional[Dict[str, Union[str, int]]] = None,
+    ) -> None:
         super().__setattr__("_config", {})
         super().__setattr__("_request", request)
         super().__setattr__("_tmpdir_factory", tmpdir_factory)
@@ -38,10 +45,20 @@ class TmuxConfig(Mapping):
         super().__setattr__("_assertion_cfg_fixture", assertion_cfg_fixture)
         self._default()
 
-    def _default(self):
-        return {}
+    def _default(self) -> None:
+        assert isinstance(self._config, dict)
+        self._config.update({})
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> str:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._request, pytest.FixtureRequest)
+            assert isinstance(self._pytestconfig, pytest.Config)
+            assert isinstance(self._tmpdir_factory, pytest.TempdirFactory)
+            assert isinstance(self._server_cfg_fixture, dict)
+            assert isinstance(self._session_cfg_fixture, dict)
+            assert isinstance(self._assertion_cfg_fixture, dict)
+            assert isinstance(self._pytestconfig, pytest.Config)
         if self._config.get(key, None) is None:
             if key == "server":
                 self._config[key] = TmuxConfigServer(
@@ -67,19 +84,23 @@ class TmuxConfig(Mapping):
                 )
         return self._config.get(key, None)
 
-    def __contains__(self, other):
+    def __contains__(self, other: object) -> bool:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
         return other in self._config
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Any) -> None:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
         self._config[key] = value
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._config)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._config)
 
 
@@ -103,13 +124,19 @@ class TmuxConfigServer(TmuxConfig):
         **args: All args accepted by libtmux.server.Server()
     """
 
-    def _default(self):
+    def _default(self) -> None:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._tmpdir_factory, pytest.TempdirFactory)
         self._config.update(
             {"socket_path": str(self._tmpdir_factory.getbasetemp() + "/tmux.socket")}
         )
         self._config.update(self._server_cfg_fixture or {})
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> str:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._pytestconfig, pytest.Config)
         if self._pytestconfig.getoption("tmux_socket_path"):
             self._config["socket_path"] = self._pytestconfig.getoption(
                 "tmux_socket_path"
@@ -142,7 +169,11 @@ class TmuxConfigSession(TmuxConfig):
         **attrs: All args accepted by libtmux.server.Server.new_session()
     """
 
-    def _default(self):
+    def _default(self) -> None:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._request, pytest.FixtureRequest)
+            assert isinstance(self._session_cfg_fixture, dict)
         __test_file_name = "".join(
             [c if c.isalnum() else "_" for c in self._request.module.__name__]
         )
@@ -162,7 +193,10 @@ class TmuxConfigSession(TmuxConfig):
 
         self._config.update(self._session_cfg_fixture or {})
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> str:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._pytestconfig, pytest.Config)
         if self._pytestconfig.getoption("tmux_start_directory"):
             self._config["start_directory"] = self._pytestconfig.getoption(
                 "tmux_start_directory"
@@ -200,14 +234,21 @@ class TmuxConfigAssert(TmuxConfig):
           - [pytest_tmux.client.TmuxClient.row][pytest_tmux.client.TmuxClient.row]
     """
 
-    def _default(self):
+    def _default(self) -> None:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._assertion_cfg_fixture, dict)
+            assert isinstance(self._request, pytest.FixtureRequest)
         self._config.update({"timeout": 2, "delay": 0.5})
         self._config.update(self._assertion_cfg_fixture or {})
         marker = self._request.node.get_closest_marker("tmux_assertion_cfg")
         if marker:
             self._config.update(marker.kwargs)
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> str:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._pytestconfig, pytest.Config)
         if self._pytestconfig.getoption("tmux_assertion_timeout"):
             self._config["timeout"] = self._pytestconfig.getoption(
                 "tmux_assertion_timeout"
@@ -233,10 +274,15 @@ class TmuxConfigPlugin(TmuxConfig):
         debug (bool):  pytest-tmux debug setting
     """
 
-    def _default(self):
+    def _default(self) -> None:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
         self._config.update({"debug": False})
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> str:
+        if TYPE_CHECKING:
+            assert isinstance(self._config, dict)
+            assert isinstance(self._pytestconfig, pytest.Config)
         if self._pytestconfig.getoption("tmux_debug"):
             self._config["debug"] = self._pytestconfig.getoption("tmux_debug")
         return self._config.get(key, None)

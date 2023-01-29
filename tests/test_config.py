@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
+
 from inspect import cleandoc
 
 
-def test_default_cfg(pytester, tmp_path_factory):
+def test_default_cfg(
+    pytester: pytest.Pytester, tmp_path_factory: pytest.TempPathFactory
+) -> None:
     """test default config values"""
     src = cleandoc(
         """
@@ -23,7 +32,7 @@ def test_default_cfg(pytester, tmp_path_factory):
     assert result.ret == 0
 
 
-def test_cmd_cfg(pytester):
+def test_cmd_cfg(pytester: pytest.Pytester) -> None:
     """test config through command line arguments"""
     cmd_options = [
         "--tmux-debug",
@@ -71,7 +80,7 @@ def test_cmd_cfg(pytester):
     assert result.ret == 0
 
 
-def test_env_cfg(pytester, monkeypatch):
+def test_env_cfg(pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch) -> None:
     """test config through env variables"""
     monkeypatch.setenv("PYTEST_TMUX_DEBUG", "1")
     monkeypatch.setenv(
@@ -113,7 +122,7 @@ def test_env_cfg(pytester, monkeypatch):
     assert result.ret == 0
 
 
-def test_live_cfg(pytester):
+def test_live_cfg(pytester: pytest.Pytester) -> None:
     src = cleandoc(
         """
         def test_live_config(tmux):
@@ -152,7 +161,7 @@ def test_live_cfg(pytester):
     assert result.ret == 0
 
 
-def test_fixture_cfg(pytester):
+def test_fixture_cfg(pytester: pytest.Pytester) -> None:
     src = cleandoc(
         """
         import pytest
@@ -205,7 +214,7 @@ def test_fixture_cfg(pytester):
     assert result.ret == 0
 
 
-def test_marker_cfg(pytester):
+def test_marker_cfg(pytester: pytest.Pytester) -> None:
     """test config through markers"""
     src = cleandoc(
         """

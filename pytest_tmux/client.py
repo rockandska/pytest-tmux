@@ -1,9 +1,26 @@
-from inspect import cleandoc
+from __future__ import annotations
 
-from libtmux import Server
+from inspect import cleandoc
+from typing import TYPE_CHECKING
+
+from libtmux.pane import Pane as TmuxPane
+from libtmux.server import Server as TmuxServer
 
 from pytest_tmux.config import TmuxConfig
 from pytest_tmux.output import TmuxOutput
+
+if TYPE_CHECKING:
+    from typing import Any, Dict, Optional, Union
+
+    import libtmux
+    import pytest
+
+    from pytest_tmux.config import (
+        TmuxConfigAssert,
+        TmuxConfigPlugin,
+        TmuxConfigServer,
+        TmuxConfigSession,
+    )
 
 
 class TmuxClient:
@@ -25,27 +42,24 @@ class TmuxClient:
         server_cfg_fixture: a server config dictionary
         session_cfg_fixture: a session config dictionary
         assertion_cfg_fixture: a assertion config dictionary
-
-    Returns:
-        A [pytest_tmux.client.TmuxClient][pytest_tmux.client.TmuxClient] object
     """
 
     def __init__(
         self,
-        request=None,
-        pytestconfig=None,
-        tmpdir_factory=None,
-        server=None,
-        server_cfg_fixture=None,
-        session_cfg_fixture=None,
-        assertion_cfg_fixture=None,
-    ):
+        request: pytest.FixtureRequest,
+        pytestconfig: pytest.Config,
+        tmpdir_factory: Optional[pytest.TempdirFactory] = None,
+        server: Optional[TmuxServer] = None,
+        server_cfg_fixture: Optional[Dict[str, Union[str, int]]] = None,
+        session_cfg_fixture: Optional[Dict[str, Union[str, int]]] = None,
+        assertion_cfg_fixture: Optional[Dict[str, Union[str, int]]] = None,
+    ) -> None:
         """State"""
         self._server = server
-        self._session = None
-        self._window = None
-        self._pane = None
-        self._debug = None
+        self._session = None  # type: Optional[ libtmux.session.Session ]
+        self._window = None  # type: Optional[ libtmux.window.Window ]
+        self._pane = None  # type: Optional[ libtmux.pane.Pane ]
+        self._debug = None  # type: Optional[ bool ]
         self.sessions = 0
 
         if server is None and tmpdir_factory is None:
@@ -69,13 +83,13 @@ class TmuxClient:
         )
 
     class suspend_capture:
-        def __init__(self, request=None):
+        def __init__(self, request: pytest.FixtureRequest) -> None:
             self.capmanager = request.config.pluginmanager.getplugin("capturemanager")
 
-        def __enter__(self):
+        def __enter__(self) -> None:
             self.capmanager.suspend_global_capture(in_=True)
 
-        def __exit__(self, _1, _2, _3):
+        def __exit__(self, _1: Any, _2: Any, _3: Any) -> None:
             try:
                 input("Press enter to continue....")
             except KeyboardInterrupt:
@@ -83,7 +97,7 @@ class TmuxClient:
             except OSError:
                 pass
 
-    def debug(self, msg=None):
+    def debug(self, msg: str) -> None:
         """
         Display a message and ask to press enter when pytest-tmux debug is
         activated.
@@ -94,9 +108,13 @@ class TmuxClient:
         Args:
             msg:    The message to display
         """
+        if TYPE_CHECKING:
+            assert isinstance(self.config, TmuxConfig)
+            assert isinstance(self.config.plugin, TmuxConfigPlugin)
         if self.config.plugin.debug:
             if self._debug is None:
                 with self.suspend_capture(self._request):
+                    assert isinstance(self.pane, TmuxPane)
                     print("")
                     print("")
                     print(
@@ -129,7 +147,7 @@ class TmuxClient:
                 print(cleandoc(msg))
 
     @property
-    def session(self):
+    def session(self) -> libtmux.session.Session:
         """
         A direct link to libtmux.session.Session created for the actual test.
 
@@ -138,6 +156,9 @@ class TmuxClient:
         Returns:
             a libtmux.session.Session object
         """
+        if TYPE_CHECKING:
+            assert isinstance(self.config, TmuxConfig)
+            assert isinstance(self.config.session, TmuxConfigSession)
         if self._session is None:
             self._session = self.server.new_session(**self.config.session)
             self.sessions += 1
@@ -145,7 +166,7 @@ class TmuxClient:
         return self._session
 
     @property
-    def window(self):
+    def window(self) -> libtmux.window.Window:
         """
         A direct link to libtmux.window.Window created for the actual test.
 
@@ -159,7 +180,7 @@ class TmuxClient:
         return self._window
 
     @property
-    def pane(self):
+    def pane(self) -> Optional[libtmux.pane.Pane]:
         """
         A direct link to libtmux.pane.Pane created for the actual test.
 
@@ -174,7 +195,7 @@ class TmuxClient:
         return self._pane
 
     @property
-    def server(self):
+    def server(self) -> libtmux.server.Server:
         """
         A direct link to libtmux.server.Server created for the actual test
         session.
@@ -184,17 +205,21 @@ class TmuxClient:
         Returns:
             a libtmux.server.Server object
         """
+        if TYPE_CHECKING:
+            assert isinstance(self.config, TmuxConfig)
+            assert isinstance(self.config.server, TmuxConfigServer)
         if self._server is None:
-            self._server = Server(**self.config.server)
+            self._server = TmuxServer(**self.config.server)
         return self._server
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Shortcut for libtmux.pane.Pane.clear()
         """
+        assert isinstance(self.pane, TmuxPane)
         self.pane.clear()
 
-    def send_keys(self, cmd=None, **kwargs):
+    def send_keys(self, cmd: str, **kwargs: Any) -> None:
         """
         Send commands to the actual pane
 
@@ -211,9 +236,12 @@ class TmuxClient:
                 cmd
             )
         )
+        assert isinstance(self.pane, TmuxPane)
         self.pane.send_keys(cmd, **kwargs)
 
-    def screen(self, timeout=None, delay=None):
+    def screen(
+        self, timeout: Optional[int] = None, delay: Optional[Union[int, float]] = None
+    ) -> TmuxOutput:
         """
         Get screen content from pane with retry capability on operators
 
@@ -225,6 +253,9 @@ class TmuxClient:
             a [TmuxOutput][pytest_tmux.output.TmuxOutput] instance
         """
 
+        if TYPE_CHECKING:
+            assert isinstance(self.config, TmuxConfig)
+            assert isinstance(self.config.server, TmuxConfigAssert)
         if timeout is None:
             timeout = self.config.assertion.timeout
         if delay is None:
@@ -236,12 +267,18 @@ class TmuxClient:
             """
         )
 
-        def _capture():
+        def _capture() -> str:
+            assert isinstance(self.pane, TmuxPane)
             return "\n".join(self.pane.capture_pane())
 
         return TmuxOutput(_capture, timeout=timeout, delay=delay)
 
-    def row(self, row, timeout=None, delay=None):
+    def row(
+        self,
+        row: int,
+        timeout: Optional[int] = None,
+        delay: Optional[Union[int, float]] = None,
+    ) -> TmuxOutput:
         """
         Get row content from pane with retry capability on operators
 
@@ -253,6 +290,10 @@ class TmuxClient:
         Returns:
             a [TmuxOutput][pytest_tmux.output.TmuxOutput] instance
         """
+        if TYPE_CHECKING:
+            assert isinstance(self.config, TmuxConfig)
+            assert isinstance(self.config.server, TmuxConfigAssert)
+
         if not isinstance(row, int):
             raise TypeError("row should be an integer")
 
@@ -267,7 +308,8 @@ class TmuxClient:
             """
         )
 
-        def _capture():
+        def _capture() -> str:
+            assert isinstance(self.pane, TmuxPane)
             try:
                 output = self.pane.capture_pane()[row]
             except IndexError:

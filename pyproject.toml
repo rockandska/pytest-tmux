@@ -47,8 +47,10 @@ flake8-comprehensions = "*"
 
 [tool.poetry.group.type]
 optional = true
+
 [tool.poetry.group.type.dependencies]
 mypy = "*"
+typing-extensions = { version="*", python = "< 3.8" }
 
 [tool.poetry.group.docs]
 optional = true

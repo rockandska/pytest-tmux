@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
 
 
-def test_assert_screen(pytester):
+def test_assert_screen(pytester: pytest.Pytester) -> None:
 
     src = r'''
         import pytest
@@ -26,7 +32,7 @@ def test_assert_screen(pytester):
     assert result.ret == 0
 
 
-def test_wait_sleep(pytester):
+def test_wait_sleep(pytester: pytest.Pytester) -> None:
     src = r'''
         import pytest
         from inspect import cleandoc

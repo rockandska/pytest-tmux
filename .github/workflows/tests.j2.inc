@@ -8,10 +8,11 @@
         include:
           {% for t in tox_targets.split(' ') -%} 
           - target: {{ t }}
-            {%- if 'python' in t %}
+            {%- if t.startswith(tox_targets_prefix + '-py') %}
+            {%- set t = t.replace( tox_targets_prefix + '-py','') %}
             python-version: |
               {{ base_python_version }}
-              {{ t | replace( tox_targets_prefix + '-python','') }}
+              {{ t[:t.index('-')]  }}
             {%- else %}
             python-version: |
               {{ base_python_version }}
@@ -26,7 +27,7 @@
           python-version: |
             ${{ matrix.python-version }}
       - name: Install Tmux
-        if: contains(matrix.target, 'python')
+        if: contains(matrix.target, 'pytest')
         run: |
           sudo apt-get install tmux
       - name: make ${{matrix.target}}

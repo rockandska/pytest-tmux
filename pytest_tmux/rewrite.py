@@ -1,4 +1,12 @@
-def tmux_rewrite(op, left, right):
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import List, Optional
+
+
+def tmux_rewrite(op: str, left: object, right: object) -> Optional[List[str]]:
     diff = []
     left_arr = str(left).split("\n")
     right_arr = str(right).split("\n")
@@ -10,23 +18,23 @@ def tmux_rewrite(op, left, right):
         diff.append("-------------")
         for i in range(len(max([left_arr, right_arr], key=len))):
             try:
-                left = left_arr[i]
+                left_v = left_arr[i]
             except IndexError:
-                left = None
+                left_v = None
 
             try:
-                right = right_arr[i]
+                right_v = right_arr[i]
             except IndexError:
-                right = None
+                right_v = None
 
             if op == "==":
-                if left != right:
-                    if left is not None:
-                        diff.append(f"- {left}")
-                    if right is not None:
-                        diff.append(f"+ {right}")
+                if left_v != right_v:
+                    if left_v is not None:
+                        diff.append(f"- {left_v}")
+                    if right_v is not None:
+                        diff.append(f"+ {right_v}")
                 else:
-                    diff.append(f"> {left}")
+                    diff.append(f"> {left_v}")
         diff.append("-------------")
     elif op == "!=":
         diff.append("failed")

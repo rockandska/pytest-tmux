@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
-def test_send_keys(pytester):
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
+
+
+def test_send_keys(pytester: pytest.Pytester) -> None:
     src = r'''
         import pytest
         from inspect import cleandoc

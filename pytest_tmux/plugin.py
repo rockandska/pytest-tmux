@@ -1,5 +1,8 @@
 #!/usr/bin/env python#
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 from pytest_tmux.fixtures import (
     _tmux_server,
@@ -12,8 +15,13 @@ from pytest_tmux.rewrite import tmux_rewrite
 
 (tmux, _tmux_server, tmux_server_config, tmux_session_config, tmux_assertion_config)
 
+if TYPE_CHECKING:
+    from typing import List, Optional
 
-def pytest_addoption(parser):
+    import pytest
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("tmux")
     group.addoption(
         "--tmux-debug",
@@ -131,7 +139,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "tmux_cfg(**cfg_opts): Allow change tmux fixtures options for the current test",
@@ -140,10 +148,14 @@ def pytest_configure(config):
 
 
 class PyTestTmuxPlugin:
-    def __init__(self, config):
+    def __init__(self, config: pytest.Config) -> None:
         self.config = config
 
 
-def pytest_assertrepr_compare(op, left, right):
+def pytest_assertrepr_compare(
+    op: str, left: object, right: object
+) -> Optional[List[str]]:
     if type(left).__name__ == "TmuxOutput" or type(right).__name__ == "TmuxOutput":
         return tmux_rewrite(op, left, right)
+    else:
+        return None

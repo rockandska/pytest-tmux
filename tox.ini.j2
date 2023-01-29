@@ -1,3 +1,5 @@
+{%- set pv = python_versions -%}
+{%- set pvs = ','.join(pv.split(' ')) -%}
 [tox]
 isolated_build = True
 minversion = 4.0
@@ -7,12 +9,9 @@ envlist =
     black
     isort
     flake8
-    mypy
-    {% for v in python_versions.split(' ')  -%}
-    python{{ v }}
-    {% endfor %}
+    py{ {{ pvs }} }-{ pytest, mypy }
 
-[testenv]
+[testenv:py{ {{ pvs }} }-pytest]
 skip_install = True
 allowlist_externals = poetry
 commands =
@@ -21,6 +20,14 @@ commands =
     poetry install --only main,test
     poetry run pytest {posargs} tests/
 
+[testenv:py{ {{ pvs }} }-mypy]
+skip_install = True
+allowlist_externals = poetry
+commands =
+    python --version
+    poetry lock --check
+    poetry install --only main,test,type
+    poetry run mypy {posargs} pytest_tmux/ tests/
 
 [testenv:flake8]
 skip_install = True
@@ -40,6 +47,8 @@ commands =
     poetry lock --check
     poetry install --only main,test,type
     poetry run mypy {posargs} pytest_tmux/ tests/
+    poetry install --only main,test,lint
+    poetry run flake8 {posargs} pytest_tmux/ tests/
 
 
 [testenv:{black, isort}]

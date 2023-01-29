@@ -1,10 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 from pytest_tmux.client import TmuxClient
 
+if TYPE_CHECKING:
+    from typing import Dict, Generator, Union
+
 
 @pytest.fixture(scope="session")
-def tmux_server_config():
+def tmux_server_config() -> Dict[str, Union[str, int]]:
     """
     Fixture intended to be override by the user to update default tmux server config
 
@@ -17,7 +24,7 @@ def tmux_server_config():
 
 
 @pytest.fixture()
-def tmux_session_config():
+def tmux_session_config() -> Dict[str, Union[str, int]]:
     """
     Fixture intended to be override by the user to update default tmux session
     config.
@@ -25,13 +32,13 @@ def tmux_session_config():
     Scope: function
 
     Returns:
-        a dictionnary containing args for libtmux.server.Server.new_session()
+        a dictionnary containing args for libtmux.server.Server.new_session
     """
     return {}
 
 
 @pytest.fixture()
-def tmux_assertion_config():
+def tmux_assertion_config() -> Dict[str, Union[str, int]]:
     """
     Fixture intended to be override by the user to update default tmux assertion config
 
@@ -40,14 +47,19 @@ def tmux_assertion_config():
     Returns:
         a dictionnary containing args for :
 
-          - pytest_tmux.client.TmuxClient.screen()
-          - pytest_tmux.client.TmuxClient.row()
+          - [pytest_tmux.client.TmuxClient.screen][pytest_tmux.client.TmuxClient.screen]
+          - [pytest_tmux.client.TmuxClient.row][pytest_tmux.client.TmuxClient.row]
     """
     return {}
 
 
 @pytest.fixture(scope="session")
-def _tmux_server(tmpdir_factory, request, pytestconfig, tmux_server_config):
+def _tmux_server(
+    tmpdir_factory: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
+    pytestconfig: pytest.Config,
+    tmux_server_config: Dict[str, Union[str, int]],
+) -> Generator[TmuxClient, None, None]:
     """
     Fixture used to create a server for the whole session
 
@@ -72,13 +84,13 @@ def _tmux_server(tmpdir_factory, request, pytestconfig, tmux_server_config):
 
 @pytest.fixture()
 def tmux(
-    tmpdir_factory,
-    request,
-    pytestconfig,
-    _tmux_server,
-    tmux_session_config,
-    tmux_assertion_config,
-):
+    tmpdir_factory: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
+    pytestconfig: pytest.Config,
+    _tmux_server: TmuxClient,
+    tmux_session_config: Dict[str, Union[str, int]],
+    tmux_assertion_config: Dict[str, Union[str, int]],
+) -> Generator[TmuxClient, None, None]:
     """
     Fixture intended to be used with tmux tests
 
