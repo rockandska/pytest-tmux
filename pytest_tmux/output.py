@@ -1,33 +1,26 @@
 from datetime import datetime
 from time import sleep
+from functools import wraps
 
 
-def retry(func=None, *, timeout=None, delay=None):
-    def _decorate(function):
-        def wrapped_function(*args, **kwargs):
+class retry(object):
+    def __init__(self, timeout=None, delay=None):
+        assert isinstance(timeout, (int, float))
+        assert isinstance(delay, (int, float))
+        self.timeout = timeout
+        self.delay = delay
+
+    def __call__(self, func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
             start_time = datetime.now()
-            if not isinstance(timeout, (int, float)):
-                raise ValueError(
-                    "timeout: expecting int/float but was {}".format(
-                        type(timeout).__name__
-                    )
-                )
-            if not isinstance(delay, (int, float)):
-                raise ValueError(
-                    "delay: expecting int/float but was {}".format(type(delay).__name__)
-                )
-            while function(*args, **kwargs) is False:
-                if (datetime.now() - start_time).total_seconds() <= timeout:
-                    sleep(delay)
+            while func(*args, **kwargs) is False:
+                if (datetime.now() - start_time).total_seconds() <= self.timeout:
+                    sleep(self.delay)
                 else:
                     return False
             return True
-
-        return wrapped_function
-
-    if func:
-        return _decorate(func)
-    return _decorate
+        return wrapped
 
 
 class TmuxOutput(object):
