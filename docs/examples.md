@@ -52,7 +52,7 @@ E         + $
 E         -------------
 ```
 
-### Waiting for a long process
+## Waiting for a long process
 
 ```python
 import pytest

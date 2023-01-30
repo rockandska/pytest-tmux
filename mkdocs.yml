@@ -1,7 +1,10 @@
 site_name: Pytest-tmux
+repo_url: https://github.com/rockandska/pytest-tmux/
 
 theme:
   name: "material"
+  features:
+    - content.action.view
 
 plugins:
   - search
