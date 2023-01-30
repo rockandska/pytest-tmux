@@ -18,12 +18,16 @@ jobs:
           - test-tox-black
           - test-tox-isort
           - test-tox-flake8
-          - test-tox-mypy
-          - test-tox-python3.7
-          - test-tox-python3.8
-          - test-tox-python3.9
-          - test-tox-python3.10
-          - test-tox-python3.11
+          - test-tox-py3.7-pytest
+          - test-tox-py3.7-mypy
+          - test-tox-py3.8-pytest
+          - test-tox-py3.8-mypy
+          - test-tox-py3.9-pytest
+          - test-tox-py3.9-mypy
+          - test-tox-py3.10-pytest
+          - test-tox-py3.10-mypy
+          - test-tox-py3.11-pytest
+          - test-tox-py3.11-mypy
           
         include:
           - target: test-tox-black
@@ -35,26 +39,43 @@ jobs:
           - target: test-tox-flake8
             python-version: |
               3.7
-          - target: test-tox-mypy
-            python-version: |
-              3.7
-          - target: test-tox-python3.7
+          - target: test-tox-py3.7-pytest
             python-version: |
               3.7
               3.7
-          - target: test-tox-python3.8
+          - target: test-tox-py3.7-mypy
+            python-version: |
+              3.7
+              3.7
+          - target: test-tox-py3.8-pytest
             python-version: |
               3.7
               3.8
-          - target: test-tox-python3.9
+          - target: test-tox-py3.8-mypy
+            python-version: |
+              3.7
+              3.8
+          - target: test-tox-py3.9-pytest
             python-version: |
               3.7
               3.9
-          - target: test-tox-python3.10
+          - target: test-tox-py3.9-mypy
+            python-version: |
+              3.7
+              3.9
+          - target: test-tox-py3.10-pytest
             python-version: |
               3.7
               3.10
-          - target: test-tox-python3.11
+          - target: test-tox-py3.10-mypy
+            python-version: |
+              3.7
+              3.10
+          - target: test-tox-py3.11-pytest
+            python-version: |
+              3.7
+              3.11
+          - target: test-tox-py3.11-mypy
             python-version: |
               3.7
               3.11
@@ -67,7 +88,7 @@ jobs:
           python-version: |
             ${{ matrix.python-version }}
       - name: Install Tmux
-        if: contains(matrix.target, 'python')
+        if: contains(matrix.target, 'pytest')
         run: |
           sudo apt-get install tmux
       - name: make ${{matrix.target}}

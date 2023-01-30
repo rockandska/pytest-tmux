@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
 
 
-def test_assert_screen(testdir, options):
+def test_assert_screen(pytester: pytest.Pytester) -> None:
 
     src = r'''
         import pytest
         from inspect import cleandoc
 
         def test_assert(tmux):
-            tmux.set(window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile')
+            tmux.config.session.window_command = 'env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile'
             assert tmux.screen() == '$'
             tmux.send_keys(r'printf "  Hello World  .\n\n"')
             expected=r"""
@@ -20,7 +26,31 @@ def test_assert_screen(testdir, options):
             assert tmux.screen() == cleandoc(expected)
     '''
 
-    testdir.makepyfile(src)
-    result = testdir.runpytest("-vv", "-s")
+    pytester.makepyfile(src)
+    result = pytester.runpytest("-vv", "-s")
+
+    assert result.ret == 0
+
+
+def test_wait_sleep(pytester: pytest.Pytester) -> None:
+    src = r'''
+        import pytest
+        from inspect import cleandoc
+
+        def test_wait_sleep(tmux):
+            # Set some options before session / windows is started
+            tmux.config.session.window_command='env -i PS1="$ " TERM="xterm-256color" /usr/bin/env bash --norc --noprofile'
+            assert tmux.row(0) == '$'
+            tmux.send_keys('sleep 5')
+            assert tmux.row(0) == '$ sleep 5'
+            expected = """
+            $ sleep 5
+            $
+            """
+            assert tmux.screen(timeout=6, delay=0.5) == cleandoc(expected)
+    '''
+
+    pytester.makepyfile(src)
+    result = pytester.runpytest("-vv", "-s")
 
     assert result.ret == 0

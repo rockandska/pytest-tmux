@@ -6,6 +6,9 @@ description = "A pytest plugin that enables tmux driven tests"
 authors = ["rockandska <yoann_mac_donald@hotmail.com>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/rockandska/pytest-tmux"
+repository = "https://github.com/rockandska/pytest-tmux.git"
+documentation = "https://pytest-tmux.readthedocs.io"
 packages = [{include = "pytest_tmux"}]
 classifiers= [
   'Development Status :: 4 - Beta',
@@ -18,24 +21,53 @@ classifiers= [
   {% endfor %}
   'Operating System :: OS Independent',
   'License :: OSI Approved :: MIT License',
+  'Typing :: Typed',
 ]
+
+[tool.poetry.urls]
+Issues = "https://github.com/rockandska/pytest-tmux/issues"
+Changes = "https://github.com/rockandska/pytest-tmux/blob/master/CHANGELOG.md"
 
 [tool.poetry.dependencies]
 python = ">={{ pv[0] }}, <= {{ pv [-1] }}.9999"
-libtmux = "0.16"
+libtmux = "0.20"
+
+[tool.poetry.group.test]
+optional = true
 
 [tool.poetry.group.test.dependencies]
-pytest = ">=3.5"
+pytest = ">=6"
 
+[tool.poetry.group.format]
+optional = true
 [tool.poetry.group.format.dependencies]
 black = "*"
 isort = "*"
 
+[tool.poetry.group.lint]
+optional = true
 [tool.poetry.group.lint.dependencies]
 flake8 = "*"
 flake8-bugbear = "*"
 flake8-comprehensions = "*"
+
+[tool.poetry.group.type]
+optional = true
+
+[tool.poetry.group.type.dependencies]
 mypy = "*"
+typing-extensions = { version="*", python = "< 3.8" }
+
+[tool.poetry.group.docs]
+optional = true
+[tool.poetry.group.docs.dependencies]
+mkdocs = ">1.4"
+mkdocstrings-python = "*"
+mkdocs-material = "*"
+mkdocs-gen-files = "*"
+mkdocs-literate-nav = "*"
+mkdocs-section-index = "*"
+mkdocs-autorefs = "*"
 
 [build-system]
 requires = ["poetry-core"]

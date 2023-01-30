@@ -1,17 +1,27 @@
 #!/usr/bin/env python#
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
-from libtmux import Server
-
-from pytest_tmux.client import Client
-from pytest_tmux.fixtures import tmux, tmux_server
+from pytest_tmux.fixtures import (
+    _tmux_server,
+    tmux,
+    tmux_assertion_config,
+    tmux_server_config,
+    tmux_session_config,
+)
 from pytest_tmux.rewrite import tmux_rewrite
 
-(tmux_server, tmux)
+(tmux, _tmux_server, tmux_server_config, tmux_session_config, tmux_assertion_config)
+
+if TYPE_CHECKING:
+    from typing import List, Optional
+
+    import pytest
 
 
-def pytest_addoption(parser):
-    """Add options to control tmux tests"""
+def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("tmux")
     group.addoption(
         "--tmux-debug",
@@ -104,32 +114,32 @@ def pytest_addoption(parser):
         """,
     )
     group.addoption(
-        "--tmux-assert-timeout",
-        dest="tmux_assert_timeout",
+        "--tmux-assertion-timeout",
+        dest="tmux_assertion_timeout",
         type=int,
         action="store",
-        default=os.getenv("PYTEST_TMUX_ASSERT_TIMEOUT", 2),
+        default=os.getenv("PYTEST_TMUX_ASSERTION_TIMEOUT", None),
         help="""
             Seconds before tmux assertion should fail
             Default: 2
-            Env: PYTEST_TMUX_ASSERT_TIMEOUT
+            Env: PYTEST_TMUX_ASSERTION_TIMEOUT
         """,
     )
     group.addoption(
-        "--tmux-assert-delay",
-        dest="tmux_assert_delay",
+        "--tmux-assertion-delay",
+        dest="tmux_assertion_delay",
         type=int,
         action="store",
-        default=os.getenv("PYTEST_TMUX_ASSERT_DELAY", 0.5),
+        default=os.getenv("PYTEST_TMUX_ASSERTION_DELAY", None),
         help="""
             Seconds to wait before tmux assertion should retry
             Default: 0.5
-            Env: PYTEST_TMUX_ASSERT_DELAY
+            Env: PYTEST_TMUX_ASSERTION_DELAY
         """,
     )
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "tmux_cfg(**cfg_opts): Allow change tmux fixtures options for the current test",
@@ -138,94 +148,14 @@ def pytest_configure(config):
 
 
 class PyTestTmuxPlugin:
-    def __init__(self, config):
+    def __init__(self, config: pytest.Config) -> None:
         self.config = config
 
-    def getconfig(self, config=None, request=None, **kwargs):
-        tmux_cfg = {}
-        """ Global/Session config """
-        if config is not None:
-            tmux_cfg.update(self._load_tmux_config(config))
-        else:
-            tmux_cfg.update(self._load_tmux_config(self.config))
-        """ Test / Marker config """
-        if request is not None:
-            tmux_cfg.update(self._load_markers_config(request))
-        tmux_cfg.update(kwargs)
 
-        """
-        Set defaults who can't be set by pytest_addoption
-        """
-        if tmux_cfg["socket_path"] is None:
-            tmux_cfg["socket_path"] = (
-                self.config._tmpdirhandler.getbasetemp() + "/tmux.socket"
-            )
-
-        return tmux_cfg
-
-    def _load_tmux_config(self, config):
-        """Load configuration from '--tmux-*' command-line."""
-        cfg = {}
-        for k, v in vars(config.option).items():
-            if k.startswith("tmux_"):
-                short_key = k[5:]
-                cfg[short_key] = v
-
-        return cfg
-
-    def _load_markers_config(self, request):
-        """Load configuration from 'tmux_cfg' markers."""
-        cfg = {}
-
-        marker = request.node.get_closest_marker("tmux_cfg")
-        if marker:
-            cfg = marker.kwargs
-
-        return cfg
-
-    def server(self):
-        """
-        Return a libtmux.Server object (use by tmux_server session fixture)
-        """
-        tmux_server_cfg = {}
-        tmux_cfg = self.getconfig()
-        tmux_server_keys = ["socket_path", "config_file", "colors"]
-        for k, v in tmux_cfg.items():
-            if k in tmux_server_keys:
-                if v is not None:
-                    tmux_server_cfg[k] = v
-
-        return Server(**tmux_server_cfg)
-
-    def client(self, tmux_server, pytest_request, **kwargs):
-        """
-        Return a pytest_tmux.Client object (used by tmux function fixture)
-        """
-
-        if not isinstance(tmux_server, Server):
-            raise ValueError("First arg need to be a Server instance")
-
-        if type(pytest_request).__name__ != "SubRequest":
-            raise ValueError("Second argument need to be a SubRequest instance")
-
-        tmux_client_cfg = {}
-        tmux_cfg = kwargs
-        """
-        Retrieve allowed parameters for Client class
-        Then filtering config parameters to use
-        """
-        tmux_client_keys = Client.list_params()
-
-        for k, v in tmux_cfg.items():
-            if k in tmux_client_keys:
-                if v is not None:
-                    tmux_client_cfg[k] = v
-
-        return Client(
-            tmux_server=tmux_server, pytest_request=pytest_request, **tmux_client_cfg
-        )
-
-
-def pytest_assertrepr_compare(op, left, right):
+def pytest_assertrepr_compare(
+    op: str, left: object, right: object
+) -> Optional[List[str]]:
     if type(left).__name__ == "TmuxOutput" or type(right).__name__ == "TmuxOutput":
         return tmux_rewrite(op, left, right)
+    else:
+        return None

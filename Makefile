@@ -102,7 +102,7 @@ $(VENV_DIR)/tox-env.mk: tox.ini | venv
 	EOF
 
 .PHONY: test
-test: $(TESTS_TARGETS)
+test: $(TESTS_TARGETS) docs build
 
 .PHONY: $(TEST_TOX_TARGETS)
 $(TEST_TOX_TARGETS): TOX_ENV = $(subst $(TEST_TOX_TARGETS_PREFIX)-,,$(@))
@@ -258,6 +258,18 @@ check-git-clean:
 		exit 1
 	fi
 
+.PHONY: docs-serve
+docs-serve: pyproject.toml
+	$(VENV_DIR)/bin/poetry lock --check
+	$(VENV_DIR)/bin/poetry install --only docs
+	$(VENV_DIR)/bin/poetry run mkdocs serve
+
+.PHONY: docs
+docs: pyproject.toml
+	$(VENV_DIR)/bin/poetry lock --check
+	$(VENV_DIR)/bin/poetry install --only docs
+	$(VENV_DIR)/bin/poetry run mkdocs build
+
 
 ##############
 # Templates
@@ -267,12 +279,12 @@ tox.ini: tox.ini.j2 .python-version
 	$(info ### Generating $@ from $<... ###)
 	jinja2 -o $@ $< -D base_python_version="$(BASE_PYTHON_VERSION)" -D python_versions="$(PYTHON_VERSIONS)"
 
-pyproject.toml: pyproject.toml.j2 .python-version .VERSION
+pyproject.toml: pyproject.toml.j2 .FORCE
 	$(info ### Generating $@ from $<... ###)
 	CURRENT_VERSION=$$(<".VERSION")
 	jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
 
-$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .python-version
+$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE
 	$(info ### Generating $@ from $<... ###)
 	mkdir -p $(@D)
 	jinja2 -o $@ $< -D tox_targets="$(TEST_TOX_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
