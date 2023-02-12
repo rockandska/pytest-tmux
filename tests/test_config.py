@@ -23,6 +23,8 @@ def test_default_cfg(
             assert tmux.window.name == 'test_default_config'
             assert tmux.config.assertion.timeout == 2
             assert tmux.config.assertion.delay == 0.5
+            assert tmux.screen()._TmuxOutput__timeout == 2
+            assert tmux.screen()._TmuxOutput__delay == 0.5
     """
     ).format(
         "{}/basetemp/tmux.socket".format(str(tmp_path_factory.getbasetemp())),
@@ -68,6 +70,8 @@ def test_cmd_cfg(pytester: pytest.Pytester) -> None:
             assert tmux.config.session.y == 32
             assert tmux.config.assertion.timeout == 5
             assert tmux.config.assertion.delay == 1
+            assert tmux.screen()._TmuxOutput__timeout == 5
+            assert tmux.screen()._TmuxOutput__delay == 1
     """
     ).format(
         "{}/tmux.socket".format(pytester.path),
@@ -110,6 +114,8 @@ def test_env_cfg(pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch) -> 
             assert tmux.config.session.y == 34
             assert tmux.config.assertion.timeout == 12
             assert tmux.config.assertion.delay == 3
+            assert tmux.screen()._TmuxOutput__timeout == 12
+            assert tmux.screen()._TmuxOutput__delay == 3
     """
     ).format(
         "{}/tmux.socket_env".format(pytester.path),
@@ -146,6 +152,8 @@ def test_live_cfg(pytester: pytest.Pytester) -> None:
             assert tmux.config.session.y == 32
             assert tmux.config.assertion.timeout == 5
             assert tmux.config.assertion.delay == 1
+            assert tmux.screen()._TmuxOutput__timeout == 5
+            assert tmux.screen()._TmuxOutput__delay == 1
     """
     ).format(
         "{}/tmux.socket".format(pytester.path),
@@ -199,6 +207,8 @@ def test_fixture_cfg(pytester: pytest.Pytester) -> None:
             assert tmux.config.session.y == 32
             assert tmux.config.assertion.timeout == 5
             assert tmux.config.assertion.delay == 1
+            assert tmux.screen()._TmuxOutput__timeout == 5
+            assert tmux.screen()._TmuxOutput__delay == 1
     """
     ).format(
         "{}/tmux.socket".format(pytester.path),
@@ -236,6 +246,8 @@ def test_marker_cfg(pytester: pytest.Pytester) -> None:
             assert tmux.config.session.y == 33
             assert tmux.config.assertion.timeout == 3
             assert tmux.config.assertion.delay == 3
+            assert tmux.screen()._TmuxOutput__timeout == 3
+            assert tmux.screen()._TmuxOutput__delay == 3
     """
     )
     pytester.makepyfile(src)
