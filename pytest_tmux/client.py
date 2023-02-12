@@ -259,7 +259,7 @@ class TmuxClient:
         if timeout is None:
             timeout = self.config.assertion.timeout
         if delay is None:
-            delay = self.config.assertion.timeout
+            delay = self.config.assertion.delay
 
         self.debug(
             """
@@ -300,7 +300,7 @@ class TmuxClient:
         if timeout is None:
             timeout = self.config.assertion.timeout
         if delay is None:
-            delay = self.config.assertion.timeout
+            delay = self.config.assertion.delay
 
         self.debug(
             f"""
