@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.0.3](https://github.com/rockandska/pytest-tmux/tree/0.0.3) (2023-02-15)
+
+### fix
+
+- use correct variable ([90e653f](https://github.com/rockandska/pytest-tmux/commit/90e653f8259f8b65ed6b2ebd0003a5ec8346a7dd))
+
 ## [0.0.2](https://github.com/rockandska/pytest-tmux/tree/0.0.2) (2023-01-30)
 
 ### fix
