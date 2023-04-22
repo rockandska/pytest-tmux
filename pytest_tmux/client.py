@@ -237,7 +237,7 @@ class TmuxClient:
             cmd: Text or input into pane
             kwargs: every arguments accepted by libtmux.pane.Pane.send_keys()
         """
-        if "supress_history" not in kwargs:
+        if "suppress_history" not in kwargs:
             kwargs["suppress_history"] = False
         self.debug(
             """
