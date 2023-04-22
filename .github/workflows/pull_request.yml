@@ -11,7 +11,7 @@ jobs:
     # Don't run twice for internal PRs from our own repo
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         target:
@@ -104,7 +104,7 @@ jobs:
     # Don't run twice for internal PRs from our own repo
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install Python

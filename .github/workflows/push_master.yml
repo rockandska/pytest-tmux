@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   Tests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         target:
@@ -99,7 +99,7 @@ jobs:
 
   Release:
     needs: Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     if:
       contains(github.event.head_commit.message, '[make release]')
 
@@ -130,7 +130,7 @@ jobs:
 
   Changelog:
     needs: Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     if: |
       always() && ! contains(github.event.head_commit.message, '[make release]')
 
