@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.0.4](https://github.com/rockandska/pytest-tmux/tree/0.0.4) (2023-04-22)
+
+### fix
+
+- Handle suppress_history arg correctly ([c592b1d](https://github.com/rockandska/pytest-tmux/commit/c592b1dd757cfb40f3ee2916c42afe3f816af68e))
+- don't prompt when interrupt in debug mode ([b479176](https://github.com/rockandska/pytest-tmux/commit/b4791765c3229eb8e47fecf4d87b8adb135135c9))
+
 ## [0.0.3](https://github.com/rockandska/pytest-tmux/tree/0.0.3) (2023-02-15)
 
 ### fix
