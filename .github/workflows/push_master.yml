@@ -11,23 +11,23 @@ concurrency:
 
 jobs:
   Tests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         target:
           - test-tox-black
           - test-tox-isort
           - test-tox-flake8
-          - test-tox-py3.7-pytest
           - test-tox-py3.7-mypy
-          - test-tox-py3.8-pytest
+          - test-tox-py3.7-pytest
           - test-tox-py3.8-mypy
-          - test-tox-py3.9-pytest
+          - test-tox-py3.8-pytest
           - test-tox-py3.9-mypy
-          - test-tox-py3.10-pytest
+          - test-tox-py3.9-pytest
           - test-tox-py3.10-mypy
-          - test-tox-py3.11-pytest
+          - test-tox-py3.10-pytest
           - test-tox-py3.11-mypy
+          - test-tox-py3.11-pytest
           
         include:
           - target: test-tox-black
@@ -39,43 +39,43 @@ jobs:
           - target: test-tox-flake8
             python-version: |
               3.7
-          - target: test-tox-py3.7-pytest
-            python-version: |
-              3.7
-              3.7
           - target: test-tox-py3.7-mypy
             python-version: |
               3.7
               3.7
-          - target: test-tox-py3.8-pytest
+          - target: test-tox-py3.7-pytest
             python-version: |
               3.7
-              3.8
+              3.7
           - target: test-tox-py3.8-mypy
             python-version: |
               3.7
               3.8
-          - target: test-tox-py3.9-pytest
+          - target: test-tox-py3.8-pytest
             python-version: |
               3.7
-              3.9
+              3.8
           - target: test-tox-py3.9-mypy
             python-version: |
               3.7
               3.9
-          - target: test-tox-py3.10-pytest
+          - target: test-tox-py3.9-pytest
             python-version: |
               3.7
-              3.10
+              3.9
           - target: test-tox-py3.10-mypy
             python-version: |
               3.7
               3.10
-          - target: test-tox-py3.11-pytest
+          - target: test-tox-py3.10-pytest
+            python-version: |
+              3.7
+              3.10
+          - target: test-tox-py3.11-mypy
             python-version: |
               3.7
               3.11
-          - target: test-tox-py3.11-mypy
+          - target: test-tox-py3.11-pytest
             python-version: |
               3.7
               3.11
@@ -99,7 +99,7 @@ jobs:
 
   Release:
     needs: Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     if:
       contains(github.event.head_commit.message, '[make release]')
 
@@ -130,7 +130,7 @@ jobs:
 
   Changelog:
     needs: Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     if: |
       always() && ! contains(github.event.head_commit.message, '[make release]')
 

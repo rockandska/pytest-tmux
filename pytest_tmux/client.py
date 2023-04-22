@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from libtmux.pane import Pane as TmuxPane
 from libtmux.server import Server as TmuxServer
+from pytest import exit as Exit
 
 from pytest_tmux.config import TmuxConfig
 from pytest_tmux.output import TmuxOutput
@@ -60,6 +61,7 @@ class TmuxClient:
         self._window = None  # type: Optional[ libtmux.window.Window ]
         self._pane = None  # type: Optional[ libtmux.pane.Pane ]
         self._debug = None  # type: Optional[ bool ]
+        self._interrupted = False
         self.sessions = 0
 
         if server is None and tmpdir_factory is None:
@@ -83,19 +85,23 @@ class TmuxClient:
         )
 
     class suspend_capture:
-        def __init__(self, request: pytest.FixtureRequest) -> None:
+        def __init__(
+            self, request: pytest.FixtureRequest, interrupted: bool = False
+        ) -> None:
             self.capmanager = request.config.pluginmanager.getplugin("capturemanager")
+            self.interrupted = interrupted
 
         def __enter__(self) -> None:
             self.capmanager.suspend_global_capture(in_=True)
 
         def __exit__(self, _1: Any, _2: Any, _3: Any) -> None:
             try:
-                input("Press enter to continue....")
-            except KeyboardInterrupt:
-                self.capmanager.resume_global_capture()
+                if not self.interrupted:
+                    input("Press enter to continue....")
             except OSError:
                 pass
+            finally:
+                self.capmanager.resume_global_capture()
 
     def debug(self, msg: str) -> None:
         """
@@ -112,39 +118,43 @@ class TmuxClient:
             assert isinstance(self.config, TmuxConfig)
             assert isinstance(self.config.plugin, TmuxConfigPlugin)
         if self.config.plugin.debug:
-            if self._debug is None:
-                with self.suspend_capture(self._request):
-                    assert isinstance(self.pane, TmuxPane)
-                    print("")
-                    print("")
-                    print(
-                        cleandoc(
-                            """
-                        pytest-tmux started with DEBUG
+            try:
+                if self._debug is None:
+                    with self.suspend_capture(self._request):
+                        assert isinstance(self.pane, TmuxPane)
+                        print("")
+                        print("")
+                        print(
+                            cleandoc(
+                                """
+                            pytest-tmux started with DEBUG
 
-                        ****************************************************************************************
-                        * Open a new window terminal and use the bellow command to connect to the tmux session *
-                        ****************************************************************************************
+                            ****************************************************************************************
+                            * Open a new window terminal and use the bellow command to connect to the tmux session *
+                            ****************************************************************************************
 
-                        tmux -S "{}" attach -t "{}" \\; setw force-width {} \\; setw force-height {}
+                            tmux -S "{}" attach -t "{}" \\; setw force-width {} \\; setw force-height {}
 
-                        """.format(
-                                self.server.socket_path,
-                                self.config.session.session_name,
-                                self.pane.display_message(
-                                    "#{window_width}", get_text=True
-                                )[0],
-                                self.pane.display_message(
-                                    "#{window_height}", get_text=True
-                                )[0],
+                            """.format(
+                                    self.server.socket_path,
+                                    self.config.session.session_name,
+                                    self.pane.display_message(
+                                        "#{window_width}", get_text=True
+                                    )[0],
+                                    self.pane.display_message(
+                                        "#{window_height}", get_text=True
+                                    )[0],
+                                )
                             )
                         )
-                    )
+                        print("")
+                        self._debug = True
+                with self.suspend_capture(self._request, self._interrupted):
                     print("")
-                    self._debug = True
-            with self.suspend_capture(self._request):
-                print("")
-                print(cleandoc(msg))
+                    print(cleandoc(msg))
+            except KeyboardInterrupt:
+                self._interrupted = True
+                Exit("CTRL+C detected.")
 
     @property
     def session(self) -> libtmux.session.Session:
@@ -227,7 +237,7 @@ class TmuxClient:
             cmd: Text or input into pane
             kwargs: every arguments accepted by libtmux.pane.Pane.send_keys()
         """
-        if "supress_history" not in kwargs:
+        if "suppress_history" not in kwargs:
             kwargs["suppress_history"] = False
         self.debug(
             """

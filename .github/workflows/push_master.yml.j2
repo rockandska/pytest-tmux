@@ -14,7 +14,7 @@ jobs:
 {% include 'tests.j2.inc' %}
   Release:
     needs: Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 {%- raw %}
     if:
       contains(github.event.head_commit.message, '[make release]')
@@ -47,7 +47,7 @@ jobs:
 {% endraw %}
   Changelog:
     needs: Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 {%- raw %}
     if: |
       always() && ! contains(github.event.head_commit.message, '[make release]')
