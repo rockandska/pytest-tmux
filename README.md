@@ -6,11 +6,11 @@
 
 A pytest plugin that enables tmux driven tests
 
-This plugin is intend to help users who whant to test interrative cli.
+This plugin is intend to help users who want to test interrative cli.
 
 When using `tmux` fixture it basically :
 
-- creates a tmux server (socket created in tmux tmpdir)
+- creates a tmux server (socket created in pytest tmpdir)
 - creates a session automatically
 - attach to the window automatically
 - attach to the pane automatically
