@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pytest-tmux"
-version = "0.0.4"
+version = "0.0.5"
 description = "A pytest plugin that enables tmux driven tests"
 authors = ["rockandska <yoann_mac_donald@hotmail.com>"]
 license = "MIT"

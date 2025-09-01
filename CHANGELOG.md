@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [0.0.5](https://github.com/rockandska/pytest-tmux/tree/0.0.5) (2025-09-01)
+
+### fix
+
+- add docs/build to tests workflow ([e0bbecc](https://github.com/rockandska/pytest-tmux/commit/e0bbeccb85aa917d66f69a5fbd71fff5439d8760))
+- always try to install virtualenv with default python version ([3ca5409](https://github.com/rockandska/pytest-tmux/commit/3ca5409afdd925204690624bcdf757c1f36f6018))
+- update debug command for newer tmux versions ([2046c01](https://github.com/rockandska/pytest-tmux/commit/2046c012421f88bc36439771b2ab01c06f62e3ac))
+
 ## [0.0.4](https://github.com/rockandska/pytest-tmux/tree/0.0.4) (2023-04-22)
 
 ### fix
