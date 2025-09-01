@@ -30,7 +30,10 @@ pytest-tmux started with DEBUG
 * Open a new window terminal and use the bellow command to connect to the tmux session *
 ****************************************************************************************
 
+For Tmux <= 2.8:
 tmux -S "/tmp/pytest-of-rockandska/pytest-1138/tmux.socket" attach -t "test_test_send_keys" \; setw force-width 80 \; setw force-height 24
+For Tmux >= 2.9:
+tmux -S "/tmp/pytest-of-rockandska/pytest-1138/tmux.socket" attach -t "test_test_send_keys" \; resize-window -x 80 -y 24
 
 Press enter to continue....
 
