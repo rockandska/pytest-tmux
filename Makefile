@@ -33,6 +33,7 @@ GHA_TEMPLATES := $(GHA_TEMPLATES_SRC:%.j2=%)
 #####
 
 GIT_CHANGELOG_VERSION := 0.2.1
+SVU_VERSION := v1.12.0
 PYTHON_VERSIONS := $(shell cat .python-version | sed -e 's/.[0-9]\+$$//g')
 BASE_PYTHON_VERSION := $(firstword $(PYTHON_VERSIONS))
 
@@ -156,7 +157,7 @@ release:
 	# add a tag if needed
 	CURRENT_GIT_BRANCH=$$(git rev-parse --abbrev-ref HEAD)
 	export LAST_TAG=$$(git for-each-ref --merged $$CURRENT_GIT_BRANCH --sort=-creatordate --format '%(refname)' refs/tags | sed 's/refs\/tags\///' | head -n1)
-	export NEXT_TAG=$$(docker run --rm -v $$PWD:/tmp --workdir /tmp ghcr.io/caarlos0/svu next --strip-prefix)
+	export NEXT_TAG=$$(docker run --rm -v $$PWD:/tmp --workdir /tmp ghcr.io/caarlos0/svu:$(SVU_VERSION) next --strip-prefix)
 	# Only if we have both information
 	if [[ -z "$${LAST_TAG:-}" || -z "$${NEXT_TAG:-}" ]];then
 		1>&2 echo "Release asked but missing LAST_TAG or NEXT_TAG"
