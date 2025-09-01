@@ -12,21 +12,3 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
 {% include 'tests.j2.inc' %}
-
-  Build:
-    needs: Tests
-
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: {{ base_python_version }}
-      - name: make build
-        run: make build
-      - name: Check that workingtree is still clean
-        run: make check-git-clean
