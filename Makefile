@@ -121,10 +121,7 @@ $(VENV_DIR)/bin/activate: dev-requirements.txt .python-version
 	$(info ### Generating Python env ###)
 	$(call check_cmd_path,python$(BASE_PYTHON_VERSION))
 	$(call check_cmd_path,pip3)
-ifeq (, $(shell command -v virtualenv 2> /dev/null))
-	$(info ##### Virtualenv not installed, try to install it...)
-	pip3 install --quiet --quiet virtualenv
-endif
+	pip$(BASE_PYTHON_VERSION) install --quiet --quiet virtualenv
 ifdef VIRTUAL_ENV
 ifneq ($(VIRTUAL_ENV),$(VENV_DIR))
 	$(error VIRTUAL_ENV '$(VIRTUAL_ENV)' already set.$(VENV_DIR) Quit this VIRTUAL_ENV before running tests)
@@ -275,16 +272,16 @@ docs: pyproject.toml
 # Templates
 ##############
 
-tox.ini: tox.ini.j2 .python-version
+tox.ini: tox.ini.j2 | venv
 	$(info ### Generating $@ from $<... ###)
 	jinja2 -o $@ $< -D base_python_version="$(BASE_PYTHON_VERSION)" -D python_versions="$(PYTHON_VERSIONS)"
 
-pyproject.toml: pyproject.toml.j2 .FORCE
+pyproject.toml: pyproject.toml.j2 .FORCE | venv
 	$(info ### Generating $@ from $<... ###)
 	CURRENT_VERSION=$$(<".VERSION")
 	jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
 
-$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE
+$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE | venv
 	$(info ### Generating $@ from $<... ###)
 	mkdir -p $(@D)
 	jinja2 -o $@ $< -D tox_targets="$(TEST_TOX_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
