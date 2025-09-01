@@ -133,9 +133,20 @@ class TmuxClient:
                             * Open a new window terminal and use the bellow command to connect to the tmux session *
                             ****************************************************************************************
 
+                            For Tmux <= 2.8:
                             tmux -S "{}" attach -t "{}" \\; setw force-width {} \\; setw force-height {}
+                            For Tmux >= 2.9:
+                            tmux -S "{}" attach -t "{}" \\; resize-window -x {} -y {}
 
                             """.format(
+                                    self.server.socket_path,
+                                    self.config.session.session_name,
+                                    self.pane.display_message(
+                                        "#{window_width}", get_text=True
+                                    )[0],
+                                    self.pane.display_message(
+                                        "#{window_height}", get_text=True
+                                    )[0],
                                     self.server.socket_path,
                                     self.config.session.session_name,
                                     self.pane.display_message(

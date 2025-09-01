@@ -16,7 +16,7 @@ VENV_DIR := .venv
 # add venv bin to PATH
 export PATH := $(MKFILE_DIR)/$(VENV_DIR)/bin:$(PATH)
 
-TESTS_TARGETS :=
+TESTS_TARGETS := docs build
 
 # Files who need to be updated when build target is asked
 BUILD_FILES := pyproject.toml
@@ -102,7 +102,7 @@ $(VENV_DIR)/tox-env.mk: tox.ini | venv
 	EOF
 
 .PHONY: test
-test: $(TESTS_TARGETS) docs build
+test: $(TESTS_TARGETS)
 
 .PHONY: $(TEST_TOX_TARGETS)
 $(TEST_TOX_TARGETS): TOX_ENV = $(subst $(TEST_TOX_TARGETS_PREFIX)-,,$(@))
@@ -121,10 +121,7 @@ $(VENV_DIR)/bin/activate: dev-requirements.txt .python-version
 	$(info ### Generating Python env ###)
 	$(call check_cmd_path,python$(BASE_PYTHON_VERSION))
 	$(call check_cmd_path,pip3)
-ifeq (, $(shell command -v virtualenv 2> /dev/null))
-	$(info ##### Virtualenv not installed, try to install it...)
-	pip3 install --quiet --quiet virtualenv
-endif
+	pip$(BASE_PYTHON_VERSION) install --quiet --quiet virtualenv
 ifdef VIRTUAL_ENV
 ifneq ($(VIRTUAL_ENV),$(VENV_DIR))
 	$(error VIRTUAL_ENV '$(VIRTUAL_ENV)' already set.$(VENV_DIR) Quit this VIRTUAL_ENV before running tests)
@@ -233,7 +230,7 @@ tag: check-git-clean
 	fi
 
 .PHONY: build
-build:
+build: | venv
 	printf '%s\n' "##### Build #####"
 	$(VENV_DIR)/bin/poetry lock --check
 	$(VENV_DIR)/bin/poetry build
@@ -259,13 +256,13 @@ check-git-clean:
 	fi
 
 .PHONY: docs-serve
-docs-serve: pyproject.toml
+docs-serve: pyproject.toml | venv
 	$(VENV_DIR)/bin/poetry lock --check
 	$(VENV_DIR)/bin/poetry install --only docs
 	$(VENV_DIR)/bin/poetry run mkdocs serve
 
 .PHONY: docs
-docs: pyproject.toml
+docs: pyproject.toml | venv
 	$(VENV_DIR)/bin/poetry lock --check
 	$(VENV_DIR)/bin/poetry install --only docs
 	$(VENV_DIR)/bin/poetry run mkdocs build
@@ -275,16 +272,16 @@ docs: pyproject.toml
 # Templates
 ##############
 
-tox.ini: tox.ini.j2 .python-version
+tox.ini: tox.ini.j2 | venv
 	$(info ### Generating $@ from $<... ###)
-	jinja2 -o $@ $< -D base_python_version="$(BASE_PYTHON_VERSION)" -D python_versions="$(PYTHON_VERSIONS)"
+	$(VENV_DIR)/bin/jinja2 -o $@ $< -D base_python_version="$(BASE_PYTHON_VERSION)" -D python_versions="$(PYTHON_VERSIONS)"
 
-pyproject.toml: pyproject.toml.j2 .FORCE
+pyproject.toml: pyproject.toml.j2 .FORCE | venv
 	$(info ### Generating $@ from $<... ###)
 	CURRENT_VERSION=$$(<".VERSION")
-	jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
+	$(VENV_DIR)/bin/jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
 
-$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE
+$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE | venv
 	$(info ### Generating $@ from $<... ###)
 	mkdir -p $(@D)
-	jinja2 -o $@ $< -D tox_targets="$(TEST_TOX_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
+	$(VENV_DIR)/bin/jinja2 -o $@ $< -D tests_targets="$(TESTS_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"

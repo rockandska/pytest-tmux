@@ -2,11 +2,11 @@
     strategy:
       matrix:
         target:
-          {% for t in tox_targets.split(' ') -%}
+          {% for t in tests_targets.split(' ') -%}
           - {{ t }}
           {% endfor %}
         include:
-          {% for t in tox_targets.split(' ') -%} 
+          {% for t in tests_targets.split(' ') -%}
           - target: {{ t }}
             {%- if t.startswith(tox_targets_prefix + '-py') %}
             {%- set t = t.replace( tox_targets_prefix + '-py','') %}

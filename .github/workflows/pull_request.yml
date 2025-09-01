@@ -15,6 +15,8 @@ jobs:
     strategy:
       matrix:
         target:
+          - docs
+          - build
           - test-tox-black
           - test-tox-isort
           - test-tox-flake8
@@ -30,6 +32,12 @@ jobs:
           - test-tox-py3.11-pytest
           
         include:
+          - target: docs
+            python-version: |
+              3.7
+          - target: build
+            python-version: |
+              3.7
           - target: test-tox-black
             python-version: |
               3.7
@@ -97,21 +105,3 @@ jobs:
         run: make check-git-clean
 
 
-
-  Build:
-    needs: Tests
-
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.7
-      - name: make build
-        run: make build
-      - name: Check that workingtree is still clean
-        run: make check-git-clean
