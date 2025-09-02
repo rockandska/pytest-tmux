@@ -6,52 +6,77 @@ on:
       - 'master'
 env:
   TERM: xterm-256color
+  UBUNTU_IMAGE: ubuntu-22.04
 concurrency:
   group: ${{ github.head_ref || github.ref_name }}
-{% endraw %}
 jobs:
-  Tests:
+{% endraw %}
+
+{% include 'pyenv_install.j2.inc' %}
+
 {% include 'tests.j2.inc' %}
+
+{%- raw %}
   Release:
+    # Don't run twice for internal PRs from our own repo
+    if: |
+      (github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository) &&
+      contains(github.event.head_commit.message, '[make release]')
     needs: Tests
     runs-on: ubuntu-22.04
-{%- raw %}
-    if:
-      contains(github.event.head_commit.message, '[make release]')
-{% endraw %}
     steps:
       - uses: actions/checkout@v2
-      - name: Install Python
-        uses: actions/setup-python@v4
+
+      - name: Restore pyenv cache
+        id: pyenv-cache
+        uses: actions/cache/restore@v4
+        env:
+          cache-name: pyenv-cache
         with:
-          python-version: {{ base_python_version }}
+          path: ${{ env.pyenv_root }}
+          key: ${{ runner.os }}-pyenv-cache-${{ hashFiles('.python-version') }}
+          restore-keys: ${{ runner.os }}-pyenv-cache-
+
+      - name: Setup PYENV
+        run: |
+          echo "${{ env.pyenv_root }}/bin" >> "$GITHUB_PATH"
+          echo "PYENV_ROOT=${{ env.pyenv_root }}" >> "$GITHUB_ENV"
+
       - name: Configure git
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - name: Fetch tags
-        run: git fetch --prune --unshallow --tags
+        run: |
+          git fetch --prune --unshallow --tags
       - name: make release
-        run: make release
+        run: |
+          eval "$(pyenv init -)"
+          pyenv rehash
+          make release
       - name: Push back CHANGELOG and tag
-        run: git push --follow-tags
+        run: |
+          git push --follow-tags
       - name: Create GH release
-        run: make release-gh
-{%- raw %}
+        run: |
+          make release-gh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: make publish
-        run: make publish
+        run: |
+          eval "$(pyenv init -)"
+          pyenv rehash
+          make publish
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
-{% endraw %}
   Changelog:
+    # Don't run twice for internal PRs from our own repo
+    if: |
+        (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
+        && always() && ! contains(github.event.head_commit.message, '[make release]')
     needs: Tests
     runs-on: ubuntu-22.04
-{%- raw %}
-    if: |
-      always() && ! contains(github.event.head_commit.message, '[make release]')
-{% endraw %}
     steps:
       - uses: actions/checkout@v2
       - name: Configure git
@@ -59,12 +84,12 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - name: Fetch tags
-        run: git fetch --prune --unshallow --tags
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: {{ base_python_version }}
+        run: |
+          git fetch --prune --unshallow --tags
       - name: make CHANGELOG.md
-        run: make CHANGELOG.md
+        run: |
+          make CHANGELOG.md
       - name: Push back CHANGELOG
-        run: git push
+        run: |
+          git push
+{% endraw %}

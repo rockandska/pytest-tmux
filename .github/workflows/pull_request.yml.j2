@@ -1,14 +1,12 @@
 name: On pull request
 on:
   push:
-    branche-ignore: 'master'
+    branches-ignore:
+      - 'master'
   pull_request:
 env:
   TERM: xterm-256color
 jobs:
-  Tests:
-
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+{% include 'pyenv_install.j2.inc' %}
 
 {% include 'tests.j2.inc' %}
