@@ -6,30 +6,25 @@ on:
       - 'master'
 env:
   TERM: xterm-256color
-  UBUNTU_IMAGE: ubuntu-22.04
+  UBUNTU_IMAGE: &UBUNTU_IMAGE ubuntu-22.04
 concurrency:
-  group: ${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
 
 
 
   pyenv:
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    uses: rockandska/ga-workflows/.github/workflows/pyenv-install.yml@pyenv
+    uses: rockandska/ga-workflows/.github/workflows/pyenv-install.yml@master
+    with:
+      runner-image: *UBUNTU_IMAGE
 
 
 
 
   Tests:
     needs: pyenv
-
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    runs-on: ubuntu-22.04
-    env:
-      pyenv_root: "/home/runner/.pyenv"
+    runs-on: *UBUNTU_IMAGE
 
     strategy:
       matrix:
@@ -58,17 +53,15 @@ jobs:
       - name: Restore pyenv cache
         id: pyenv-cache
         uses: actions/cache/restore@v4
-        env:
-          cache-name: pyenv-cache
         with:
-          path: ${{ env.pyenv_root }}
-          key: ${{ runner.os }}-pyenv-cache-${{ hashFiles('.python-version') }}
-          restore-keys: ${{ runner.os }}-pyenv-cache-
+          path: ${{ needs.pyenv.outputs.cache-path }}
+          key: ${{ needs.pyenv.outputs.cache-key }}
+          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
 
       - name: Setup PYENV
         run: |
-          echo "${{ env.pyenv_root }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ env.pyenv_root }}" >> "$GITHUB_ENV"
+          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
+          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
 
       - name: Install Tmux
         if: contains(matrix.target, 'pytest')
@@ -85,51 +78,50 @@ jobs:
 
 
   Release:
-    # Don't run twice for internal PRs from our own repo
-    if: |
-      (github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name != github.repository) &&
-      contains(github.event.head_commit.message, '[make release]')
+    if: contains(github.event.head_commit.message, '[make release]')
     needs: Tests
-    runs-on: ubuntu-22.04
+    runs-on: *UBUNTU_IMAGE
     steps:
       - uses: actions/checkout@v2
 
       - name: Restore pyenv cache
         id: pyenv-cache
         uses: actions/cache/restore@v4
-        env:
-          cache-name: pyenv-cache
         with:
-          path: ${{ env.pyenv_root }}
-          key: ${{ runner.os }}-pyenv-cache-${{ hashFiles('.python-version') }}
-          restore-keys: ${{ runner.os }}-pyenv-cache-
+          path: ${{ needs.pyenv.outputs.cache-path }}
+          key: ${{ needs.pyenv.outputs.cache-key }}
+          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
 
       - name: Setup PYENV
         run: |
-          echo "${{ env.pyenv_root }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ env.pyenv_root }}" >> "$GITHUB_ENV"
+          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
+          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
 
       - name: Configure git
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
       - name: Fetch tags
         run: |
           git fetch --prune --unshallow --tags
+
       - name: make release
         run: |
           eval "$(pyenv init -)"
           pyenv rehash
           make release
+
       - name: Push back CHANGELOG and tag
         run: |
           git push --follow-tags
+
       - name: Create GH release
         run: |
           make release-gh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: make publish
         run: |
           eval "$(pyenv init -)"
@@ -137,13 +129,11 @@ jobs:
           make publish
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+
   Changelog:
-    # Don't run twice for internal PRs from our own repo
-    if: |
-        (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
-        && always() && ! contains(github.event.head_commit.message, '[make release]')
+    if: always() && ! contains(github.event.head_commit.message, '[make release]')
     needs: Tests
-    runs-on: ubuntu-22.04
+    runs-on: *UBUNTU_IMAGE
     steps:
       - uses: actions/checkout@v2
       - name: Configure git

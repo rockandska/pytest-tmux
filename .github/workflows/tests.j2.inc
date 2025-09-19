@@ -1,13 +1,7 @@
 {% raw %}
   Tests:
     needs: pyenv
-
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    runs-on: ubuntu-22.04
-    env:
-      pyenv_root: "/home/runner/.pyenv"
+    runs-on: *UBUNTU_IMAGE
 {% endraw %}
     strategy:
       matrix:
@@ -23,17 +17,15 @@
       - name: Restore pyenv cache
         id: pyenv-cache
         uses: actions/cache/restore@v4
-        env:
-          cache-name: pyenv-cache
         with:
-          path: ${{ env.pyenv_root }}
-          key: ${{ runner.os }}-pyenv-cache-${{ hashFiles('.python-version') }}
-          restore-keys: ${{ runner.os }}-pyenv-cache-
+          path: ${{ needs.pyenv.outputs.cache-path }}
+          key: ${{ needs.pyenv.outputs.cache-key }}
+          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
 
       - name: Setup PYENV
         run: |
-          echo "${{ env.pyenv_root }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ env.pyenv_root }}" >> "$GITHUB_ENV"
+          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
+          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
 
       - name: Install Tmux
         if: contains(matrix.target, 'pytest')

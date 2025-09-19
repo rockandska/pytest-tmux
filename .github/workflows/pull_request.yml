@@ -1,30 +1,31 @@
+
 name: On pull request
 on:
+  pull_request:
   push:
     branches-ignore:
       - 'master'
-  pull_request:
 env:
   TERM: xterm-256color
+  UBUNTU_IMAGE: &UBUNTU_IMAGE ubuntu-22.04
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
 
+
+
   pyenv:
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    uses: rockandska/ga-workflows/.github/workflows/pyenv-install.yml@pyenv
+    uses: rockandska/ga-workflows/.github/workflows/pyenv-install.yml@master
+    with:
+      runner-image: *UBUNTU_IMAGE
 
 
 
 
   Tests:
     needs: pyenv
-
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
-    runs-on: ubuntu-22.04
-    env:
-      pyenv_root: "/home/runner/.pyenv"
+    runs-on: *UBUNTU_IMAGE
 
     strategy:
       matrix:
@@ -53,17 +54,15 @@ jobs:
       - name: Restore pyenv cache
         id: pyenv-cache
         uses: actions/cache/restore@v4
-        env:
-          cache-name: pyenv-cache
         with:
-          path: ${{ env.pyenv_root }}
-          key: ${{ runner.os }}-pyenv-cache-${{ hashFiles('.python-version') }}
-          restore-keys: ${{ runner.os }}-pyenv-cache-
+          path: ${{ needs.pyenv.outputs.cache-path }}
+          key: ${{ needs.pyenv.outputs.cache-key }}
+          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
 
       - name: Setup PYENV
         run: |
-          echo "${{ env.pyenv_root }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ env.pyenv_root }}" >> "$GITHUB_ENV"
+          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
+          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
 
       - name: Install Tmux
         if: contains(matrix.target, 'pytest')
