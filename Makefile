@@ -50,7 +50,7 @@ define check_cmd_path
     $$(error Missing argument on 'check_cmd' call)
   endif
   $$(info Checking presence of '$$(_EXECUTABLE)')
-  _CMD_PATH = $$(shell PATH="$$(PATH)" which $$(_EXECUTABLE))
+  _CMD_PATH = $$(shell PATH="$$(PATH)" command -v $$(_EXECUTABLE))
   ifneq ($$(_CMD_PATH),)
     ifdef _EXPECTED_PATH
       ifneq ($$(_CMD_PATH),$$(_EXPECTED_PATH))
@@ -121,8 +121,8 @@ venv: $(VENV_DIR)/bin/activate .python-venv
 $(VENV_DIR)/bin/activate: dev-requirements.txt .python-version
 	$(info ### Generating Python env ###)
 	$(call check_cmd_path,python$(BASE_PYTHON_VERSION))
-	$(call check_cmd_path,pip3)
-	pip$(BASE_PYTHON_VERSION) install --quiet --quiet virtualenv
+	$(call check_cmd_path,pip)
+	pip install virtualenv
 ifdef VIRTUAL_ENV
 ifneq ($(VIRTUAL_ENV),$(VENV_DIR))
 	$(error VIRTUAL_ENV '$(VIRTUAL_ENV)' already set.$(VENV_DIR) Quit this VIRTUAL_ENV before running tests)
@@ -286,3 +286,7 @@ $(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE | venv
 	$(info ### Generating $@ from $<... ###)
 	mkdir -p $(@D)
 	$(VENV_DIR)/bin/jinja2 -o $@ $< -D tests_targets="$(TESTS_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
+
+.PHONY: clean
+clean:
+	git clean -xdf

@@ -1,14 +1,19 @@
+{% raw %}
 name: On pull request
 on:
-  push:
-    branche-ignore: 'master'
   pull_request:
+  push:
+    branches-ignore:
+      - 'master'
 env:
   TERM: xterm-256color
+  UBUNTU_IMAGE: &UBUNTU_IMAGE ubuntu-22.04
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  Tests:
+{% endraw %}
 
-    # Don't run twice for internal PRs from our own repo
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+{% include 'pyenv_install.j2.inc' %}
 
 {% include 'tests.j2.inc' %}
