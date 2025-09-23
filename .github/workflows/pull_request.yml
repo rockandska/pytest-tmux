@@ -1,74 +1,20 @@
-
 name: On pull request
 on:
   pull_request:
   push:
     branches-ignore:
       - 'master'
+
 env:
   TERM: xterm-256color
   UBUNTU_IMAGE: &UBUNTU_IMAGE ubuntu-22.04
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
-
-
-
-  pyenv:
-    uses: rockandska/ga-workflows/.github/workflows/pyenv-install.yml@master
+  Tests:
+    uses: ./.github/workflows/tests.yml
     with:
       runner-image: *UBUNTU_IMAGE
-
-
-
-  Tests:
-    needs: pyenv
-    runs-on: *UBUNTU_IMAGE
-    strategy:
-      matrix:
-        target:
-          - docs
-          - build
-          - test-tox-black
-          - test-tox-isort
-          - test-tox-flake8
-          - test-tox-mypy
-          - test-tox-py3.7-pytest
-          - test-tox-py3.8-pytest
-          - test-tox-py3.9-pytest
-          - test-tox-py3.10-pytest
-          - test-tox-py3.11-pytest
-          
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Restore pyenv cache
-        id: pyenv-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ needs.pyenv.outputs.cache-path }}
-          key: ${{ needs.pyenv.outputs.cache-key }}
-          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
-
-      - name: Setup PYENV
-        run: |
-          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
-
-      - name: Install Tmux
-        if: contains(matrix.target, 'pytest')
-        run: |
-          sudo apt-get install tmux
-
-      - name: make ${{matrix.target}}
-        run: |
-          eval "$(pyenv init -)"
-          pyenv rehash
-          make ${{matrix.target}}
-      - name: Check that workingtree is still clean
-        run: make check-git-clean
-
-

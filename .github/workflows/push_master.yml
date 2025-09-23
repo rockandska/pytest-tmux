@@ -12,70 +12,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
 
-
-
-  pyenv:
-    uses: rockandska/ga-workflows/.github/workflows/pyenv-install.yml@master
+  Tests:
+    uses: ./.github/workflows/tests.yml
     with:
       runner-image: *UBUNTU_IMAGE
 
-
-
-  Tests:
-    needs: pyenv
-    runs-on: *UBUNTU_IMAGE
-    strategy:
-      matrix:
-        target:
-          - docs
-          - build
-          - test-tox-black
-          - test-tox-isort
-          - test-tox-flake8
-          - test-tox-mypy
-          - test-tox-py3.7-pytest
-          - test-tox-py3.8-pytest
-          - test-tox-py3.9-pytest
-          - test-tox-py3.10-pytest
-          - test-tox-py3.11-pytest
-          
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Restore pyenv cache
-        id: pyenv-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ needs.pyenv.outputs.cache-path }}
-          key: ${{ needs.pyenv.outputs.cache-key }}
-          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
-
-      - name: Setup PYENV
-        run: |
-          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
-
-      - name: Install Tmux
-        if: contains(matrix.target, 'pytest')
-        run: |
-          sudo apt-get install tmux
-
-      - name: make ${{matrix.target}}
-        run: |
-          eval "$(pyenv init -)"
-          pyenv rehash
-          make ${{matrix.target}}
-      - name: Check that workingtree is still clean
-        run: make check-git-clean
-
-
-
-
-    
   Release:
-    if: contains(github.event.head_commit.message, '[make release]')
     needs: Tests
     runs-on: *UBUNTU_IMAGE
     steps:
@@ -85,14 +27,14 @@ jobs:
         id: pyenv-cache
         uses: actions/cache/restore@v4
         with:
-          path: ${{ needs.pyenv.outputs.cache-path }}
-          key: ${{ needs.pyenv.outputs.cache-key }}
-          restore-keys: ${{ needs.pyenv.outputs.cache-restore-keys }}
+          path: ${{ needs.Tests.outputs.cache-path }}
+          key: ${{ needs.Tests.outputs.cache-key }}
+          restore-keys: ${{ needs.Tests.outputs.cache-restore-keys }}
 
       - name: Setup PYENV
         run: |
-          echo "${{ needs.pyenv.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
-          echo "PYENV_ROOT=${{ needs.pyenv.outputs.cache-path }}" >> "$GITHUB_ENV"
+          echo "${{ needs.Tests.outputs.cache-path }}/bin" >> "$GITHUB_PATH"
+          echo "PYENV_ROOT=${{ needs.Tests.outputs.cache-path }}" >> "$GITHUB_ENV"
 
       - name: Configure git
         run: |
@@ -104,43 +46,34 @@ jobs:
           git fetch --prune --unshallow --tags
 
       - name: make release
+        if: contains(github.event.head_commit.message, '[make release]')
         run: |
           eval "$(pyenv init -)"
           pyenv rehash
           make release
-
-      - name: Push back CHANGELOG and tag
-        run: |
-          git push --follow-tags
-
-      - name: Create GH release
-        run: |
-          make release-gh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+          CI: "True"
 
-      - name: make publish
+      - name: make prerelease
+        if: contains(github.event.head_commit.message, '[make prerelease]')
         run: |
           eval "$(pyenv init -)"
           pyenv rehash
-          make publish
+          make prerelease
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+          CI: "True"
 
-  Changelog:
-    if: always() && ! contains(github.event.head_commit.message, '[make release]')
-    needs: Tests
-    runs-on: *UBUNTU_IMAGE
-    steps:
-      - uses: actions/checkout@v2
-      - name: Configure git
+      - name: make norelease
+        if: |
+          ! contains(github.event.head_commit.message, '[make release]')
+          && ! contains(github.event.head_commit.message, '[make prerelease]')
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-      - name: make CHANGELOG.md
-        run: |
-          make CHANGELOG.md
-      - name: Push back CHANGELOG
-        run: |
-          git push
-
+          eval "$(pyenv init -)"
+          pyenv rehash
+          make norelease
+        env:
+          CI: "True"

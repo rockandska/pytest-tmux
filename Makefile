@@ -16,7 +16,7 @@ VENV_DIR := venv
 # add venv bin to PATH
 export PATH := $(CURDIR)/$(VENV_DIR)/bin:$(PATH)
 
-TESTS_TARGETS := docs build
+TEST_TARGETS := docs build
 
 # Files who need to be updated when build target is asked
 BUILD_FILES := pyproject.toml
@@ -38,13 +38,13 @@ BASE_PYTHON_VERSION := $(firstword $(PYTHON_VERSIONS))
 -include $(VENV_DIR)/tox-env.mk
 
 .SECONDARY: $(VENV_DIR)/tox-env.mk
-$(VENV_DIR)/tox-env.mk: tox.ini
+$(VENV_DIR)/tox-env.mk: Makefile tox.ini
 	TEST_TOX_ENV_LIST=$$($(VENV_DIR)/bin/tox -q -l 2> /dev/null | tr '\n' ' ')
 	cat << EOF > $@
 		TEST_TOX_TARGETS_PREFIX = test-tox
 		TEST_TOX_ENV_LIST = $${TEST_TOX_ENV_LIST}
 		TEST_TOX_TARGETS = \$$(addprefix \$$(TEST_TOX_TARGETS_PREFIX)-,\$$(TEST_TOX_ENV_LIST))
-		TESTS_TARGETS += \$$(TEST_TOX_TARGETS)
+		TEST_TARGETS := \$$(TEST_TARGETS) \$$(TEST_TOX_TARGETS)
 	EOF
 
 #####
@@ -58,7 +58,7 @@ all: test build
 .FORCE:
 
 .PHONY: test
-test: $(TESTS_TARGETS)
+test: $(TEST_TARGETS)
 
 .PHONY: $(TEST_TOX_TARGETS)
 $(TEST_TOX_TARGETS): TOX_ENV = $(subst $(TEST_TOX_TARGETS_PREFIX)-,,$(@))
@@ -265,10 +265,10 @@ pyproject.toml: pyproject.toml.j2 .VERSION | venv
 	$(VENV_DIR)/bin/jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
 
 .SECONDARY: $(GHA_TEMPLATES)
-$(GHA_TEMPLATES): tox.ini.j2 | venv
-	echo "*** Generating $@ from $<... ***"
-	mkdir -p $(@D)
-	$(VENV_DIR)/bin/jinja2 -o $@ $< -D tests_targets="$(TESTS_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
+$(GHA_TEMPLATES): TMP_TARGETS = $(_SPACE)$(subst $(_SPACE),$(_SPACE)$(_COMMA)$(_SPACE),$(strip $(TEST_TARGETS) ))$(_SPACE)
+$(GHA_TEMPLATES): tox.ini .FORCE
+	echo "*** Updating $@ from $<... ***"
+	docker run --rm -v "$(CURDIR):$(CURDIR)" mikefarah/yq:4.9.6 -i eval '.jobs.Tests.strategy.matrix.target = [ $(subst $(_SPACE),",$(TMP_TARGETS)) ]' $(CURDIR)/$@
 
 .PHONY: clean
 clean:
