@@ -22,11 +22,9 @@ jobs:
 
 
 
-
   Tests:
     needs: pyenv
     runs-on: *UBUNTU_IMAGE
-
     strategy:
       matrix:
         target:
@@ -35,15 +33,11 @@ jobs:
           - test-tox-black
           - test-tox-isort
           - test-tox-flake8
-          - test-tox-py3.7-mypy
+          - test-tox-mypy
           - test-tox-py3.7-pytest
-          - test-tox-py3.8-mypy
           - test-tox-py3.8-pytest
-          - test-tox-py3.9-mypy
           - test-tox-py3.9-pytest
-          - test-tox-py3.10-mypy
           - test-tox-py3.10-pytest
-          - test-tox-py3.11-mypy
           - test-tox-py3.11-pytest
           
 

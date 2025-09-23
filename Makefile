@@ -1,6 +1,9 @@
+# Test GNU MAKE
+$(if $(strip $(MAKE_VERSION)),,$(error ** Error ** : GNU Make is required for this Makefile !))
+
 .ONESHELL:
 SHELL := bash
-.SHELLFLAGS := -eu -o pipefail -c
+.SHELLFLAGS := -Eeu -o pipefail $(if $(DEBUG),-x) -c
 _SPACE = $(eval) $(eval)
 _COMMA := ,
 
@@ -8,99 +11,51 @@ _COMMA := ,
 # VARS
 #####
 
-MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
-MKFILE_DIR := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
-
-VENV_DIR := .venv
+VENV_DIR := venv
 
 # add venv bin to PATH
-export PATH := $(MKFILE_DIR)/$(VENV_DIR)/bin:$(PATH)
+export PATH := $(CURDIR)/$(VENV_DIR)/bin:$(PATH)
 
 TESTS_TARGETS := docs build
 
 # Files who need to be updated when build target is asked
 BUILD_FILES := pyproject.toml
 # Files who need to be updated when release target is asked
-RELEASE_FILES := CHANGELOG.md .VERSION $(BUILD_FILES)
+RELEASE_FILES := $(BUILD_FILES) CHANGELOG.md .VERSION
 # GHA Workflows templates
 GHA_TEMPLATES_DIR := .github/workflows
-GHA_TEMPLATES_SRC := $(wildcard $(GHA_TEMPLATES_DIR)/*.j2)
-GHA_TEMPLATES_INC := $(wildcard $(GHA_TEMPLATES_DIR)/*.inc)
-GHA_TEMPLATES := $(GHA_TEMPLATES_SRC:%.j2=%)
+GHA_TEMPLATES := $(wildcard $(GHA_TEMPLATES_DIR)/*.yml)
 
 #####
 # Versions
 #####
 
 GIT_CHANGELOG_VERSION := 0.2.1
-SVU_VERSION := v1.12.0
+SVU_VERSION := v3.2.3
 PYTHON_VERSIONS := $(shell cat .python-version | sed -e 's/.[0-9]\+$$//g')
 BASE_PYTHON_VERSION := $(firstword $(PYTHON_VERSIONS))
 
-#####
-# Function
-#####
-
-define check_cmd_path
-  $(eval
-  _EXECUTABLE = $(1)
-  _EXPECTED_PATH = $(2)
-  _MSG = $(3)
-  ifndef _EXECUTABLE
-    $$(error Missing argument on 'check_cmd' call)
-  endif
-  $$(info Checking presence of '$$(_EXECUTABLE)')
-  _CMD_PATH = $$(shell PATH="$$(PATH)" command -v $$(_EXECUTABLE))
-  ifneq ($$(_CMD_PATH),)
-    ifdef _EXPECTED_PATH
-      ifneq ($$(_CMD_PATH),$$(_EXPECTED_PATH))
-        ifneq ($$(_MSG),)
-          $$(error $$(_MSG))
-        endif
-        ifeq ($$(_CMD_PATH),)
-          $$(error Expecting '$$(_EXECUTABLE)' to be in '$$(_EXPECTED_PATH)' but is not installed)
-        else
-          $$(error Expecting '$$(_EXECUTABLE)' to be in '$$(_EXPECTED_PATH)' but found in '$$(_CMD_PATH)')
-        endif
-      endif
-    endif
-  else
-    $$(error '$$(_EXECUTABLE)' not found in $$$$PATH)
-  endif
-  $$(info OK '$$(_EXECUTABLE)' found in '$$(_CMD_PATH)'...)
-  )
-endef
-
-#####
-# Include
-#####
-
 -include $(VENV_DIR)/tox-env.mk
+
+.SECONDARY: $(VENV_DIR)/tox-env.mk
+$(VENV_DIR)/tox-env.mk: tox.ini
+	TEST_TOX_ENV_LIST=$$($(VENV_DIR)/bin/tox -q -l 2> /dev/null | tr '\n' ' ')
+	cat << EOF > $@
+		TEST_TOX_TARGETS_PREFIX = test-tox
+		TEST_TOX_ENV_LIST = $${TEST_TOX_ENV_LIST}
+		TEST_TOX_TARGETS = \$$(addprefix \$$(TEST_TOX_TARGETS_PREFIX)-,\$$(TEST_TOX_ENV_LIST))
+		TESTS_TARGETS += \$$(TEST_TOX_TARGETS)
+	EOF
 
 #####
 # Targets
 #####
-
-# invoking make V=1 will print everything
-.PHONY: $(V).SILENT
-$(V).SILENT:
 
 .PHONY: all
 all: test build
 
 .PHONY: .FORCE
 .FORCE:
-
-$(VENV_DIR)/tox-env.mk: tox.ini | venv
-	$(info ### Generating targets based on tox environments... ###)
-	$(call check_cmd_path,tox,$(MKFILE_DIR)/$(VENV_DIR)/bin/tox)
-	TEST_TOX_ENV_LIST=$$($(VENV_DIR)/bin/tox -q -l 2> /dev/null | tr '\n' ' ')
-	cat << EOF > $(@)
-		TEST_TOX_TARGETS_PREFIX := test-tox
-		TEST_TOX_ENV_LIST := $${TEST_TOX_ENV_LIST}
-		TEST_TOX_TARGETS := \$$(addprefix \$$(TEST_TOX_TARGETS_PREFIX)-,\$$(TEST_TOX_ENV_LIST))
-		TESTS_TARGETS := \$$(TESTS_TARGETS) \$$(TEST_TOX_TARGETS)
-	EOF
 
 .PHONY: test
 test: $(TESTS_TARGETS)
@@ -115,178 +70,211 @@ $(TEST_TOX_TARGETS): venv pyproject.toml github-workflows
 ##############
 
 .PHONY: venv
-venv: $(VENV_DIR)/bin/activate .python-venv
+venv: $(VENV_DIR)/pyenv.done $(VENV_DIR)/bin/activate
 
-.SECONDARY: $(VENV_DIR)/bin/activate
-$(VENV_DIR)/bin/activate: dev-requirements.txt .python-version
-	$(info ### Generating Python env ###)
-	$(call check_cmd_path,python$(BASE_PYTHON_VERSION))
-	$(call check_cmd_path,pip)
-	pip install virtualenv
-ifdef VIRTUAL_ENV
-ifneq ($(VIRTUAL_ENV),$(VENV_DIR))
-	$(error VIRTUAL_ENV '$(VIRTUAL_ENV)' already set.$(VENV_DIR) Quit this VIRTUAL_ENV before running tests)
-endif
-endif
-	$(info Installing $(BASE_PYTHON_VERSION) tests requirements)
-	virtualenv --quiet -p $(shell command -v python$(BASE_PYTHON_VERSION)) $(@D)/../
+.SECONDARY: $(VENV_DIR)/bin/activate 
+$(VENV_DIR)/bin/activate: $(CURDIR)/dev-requirements.txt
+	mkdir -p $(VENV_DIR)
+	echo "*** Pyenv setup ***"
+	eval "$$(pyenv init -)"
+	echo "*** Python version in use ***"
+	python --version
+	if [ -n "${VIRTUAL_ENV:-}" ];then
+		1>&2 echo "Error: VIRTUAL_ENV '${VIRTUAL_ENV:-}' already set. Quit this VIRTUAL_ENV before running tests)"
+		exit 1
+	fi
+	pip install $(if $(DEBUG),,--quiet --quiet) virtualenv
+	echo "*** Installing deps ***"
+	virtualenv --quiet -p python3 $(VENV_DIR)
 	VIRTUAL_ENV_DISABLE_PROMPT=true . $@
-	pip install --quiet --quiet -Ur $<
+	pip install $(if $(DEBUG),,--quiet --quiet) -Ur $<
 	touch $@
 
-.python-venv: $(VENV_DIR)/bin/activate
-	$(info ### Generating venv link $(@) ###)
-	ln -sfr $(VENV_DIR)/bin/activate $(@)
+.SECONDARY: $(VENV_DIR)/pyenv.done
+$(VENV_DIR)/pyenv.done: $(CURDIR)/.python-version
+	mkdir -p $(VENV_DIR)
+	echo "*** Checking presence of pyenv ***"
+	if command -v  "pyenv" &> /dev/null ;then
+		echo "*** Installing python version(s) ***"
+		eval "$$(pyenv init -)"
+		pyenv install -s
+		echo "*** Python version in use ***"
+		python --version
+		touch $@
+	else
+		1>&2 echo "Error: pyenv is not installed"
+		exit 1
+	fi
+
 
 ###################
 # Github workflows
 ###################
 .PHONY: github-workflows
-github-workflows: $(GHA_TEMPLATES)
+github-workflows: venv $(GHA_TEMPLATES)
 
 #######
 # Release
 #######
 
-.PHONY: release
-release:
-	# Check that the repository is clean
-	$(MAKE) --no-print-directory check-git-clean
-	# Update $(RELEASE_FILES)
-	# commit changes
-	# add a tag if needed
-	CURRENT_GIT_BRANCH=$$(git rev-parse --abbrev-ref HEAD)
-	export LAST_TAG=$$(git for-each-ref --merged $$CURRENT_GIT_BRANCH --sort=-creatordate --format '%(refname)' refs/tags | sed 's/refs\/tags\///' | head -n1)
-	export NEXT_TAG=$$(docker run --rm -v $$PWD:/tmp --workdir /tmp ghcr.io/caarlos0/svu:$(SVU_VERSION) next --strip-prefix)
-	# Only if we have both information
-	if [[ -z "$${LAST_TAG:-}" || -z "$${NEXT_TAG:-}" ]];then
-		1>&2 echo "Release asked but missing LAST_TAG or NEXT_TAG"
-		exit 1
-	fi
-	if [[ "$${LAST_TAG:-}" == "$${NEXT_TAG:-}" ]];then
-		1>&2 echo "Release asked but LAST_TAG and NEXT_TAG are equal"
-		exit 1
-	fi
-	# Check if the future tag already exists
-	if git show-ref --tags "$${NEXT_TAG:-}" --quiet &> /dev/null; then
-		1>&2 echo "Tag '$${NEXT_TAG:-}' already exists"
-		exit 1
+.PHONY: norelease prerelease release
+norelease : NEXT_TAG :=
+prerelease: NEXT_TAG := $(shell docker run --rm -v $(CURDIR):/tmp --workdir /tmp ghcr.io/caarlos0/svu:$(SVU_VERSION) prerelease --prerelease "rc" --tag.prefix "")
+release: NEXT_TAG := $(shell docker run --rm -v $(CURDIR):/tmp --workdir /tmp ghcr.io/caarlos0/svu:$(SVU_VERSION) next --tag.prefix "")
+norelease prerelease release: LAST_TAG := $(shell git describe --tags --abbrev=0)
+norelease prerelease release: release-gh publish
+
+.PHONY: tag-release
+.SECONDARY: tag-release
+tag-release: commit-changes
+	echo "*** Tagging ***"
+	if [[ -z "$(NEXT_TAG)" ]];then
+		1>&2 echo "No release asked"
+	elif [[ "$(NEXT_TAG)" == "$(LAST_TAG)" ]];then
+		1>&2 echo "Not tag generated by previous commits"
 	else
-		true
+		if git show-ref --tags "$(NEXT_TAG)" &>/dev/null;then
+			1>&2 echo "tag '$(NEXT_TAG)' already exist, nothing to tag"
+		else
+			printf '%s\n' "Adding tag '$(NEXT_TAG)'"
+			git tag -m "$(NEXT_TAG)" "$(NEXT_TAG)"
+		fi
 	fi
-	# Update files used in release
-	$(MAKE) --no-print-directory $(RELEASE_FILES)
-	# Check that the build still working
-	$(MAKE) --no-print-directory build
+
+.PHONY: commit-changes
+.SECONDARY: commit-changes
+commit-changes: $(RELEASE_FILES)
+	printf '%s\n' "*** Commiting changes ***"
 	if ! git ls-files --error-unmatch $(RELEASE_FILES) > /dev/null 2>&1 || ! git diff --exit-code $(RELEASE_FILES) > /dev/null 2>&1;then
-		printf '%s\n' "##### Commit changes #####"
 		git add $(RELEASE_FILES)
-		git commit -m"Release $${NEXT_TAG:-} [skip ci]"
-		$(MAKE) --no-print-directory tag
+		$(MAKE) --no-print-directory check-git-clean
+		if [[ -n "$(NEXT_TAG)" ]];then
+			git commit -m"Release $(NEXT_TAG) [skip ci]"
+		else
+			git commit -m"CHANGELOG update [skip ci]"
+		fi
+		if [[ "$${CI}" == "True" ]];then
+			echo "Pushing changes to repository"
+			git push --follow-tags
+		fi
+	else
+		1>&2 echo "Nothing changed..."
 	fi
-	# Check that the repository is clean
-	$(MAKE) --no-print-directory check-git-clean
 
 .PHONY: release-gh
-release-gh:
-	CURRENT_TAG=$$(git tag --points-at)
-	if [[ "$${CURRENT_TAG:-}" ]];then
-		echo "Create GH release '$${CURRENT_TAG:-}'"
-		CHANGELOG=$$(docker run --rm -e CHANGELOG_TAG="$${CURRENT_TAG:-}" -v $$PWD:/git rockandska/git-changelog:$(GIT_CHANGELOG_VERSION) -p)
-		gh release create "$${CURRENT_TAG}" -t "$${CURRENT_TAG:-}" --notes "$${CHANGELOG}"
+.SECONDARY: release-gh
+release-gh: tag-release
+	echo "*** Creating GH release ***"
+	if [[ -n "$(NEXT_TAG)" ]];then
+		if [[ "$(NEXT_TAG)" != "$(LAST_TAG)" ]];then
+			1>&2 echo "Commits triggered a new release: $(NEXT_TAG)"
+			CHANGELOG=$$(docker run --rm -e CHANGELOG_TAG="$(NEXT_TAG)" -v $(CURDIR):/git rockandska/git-changelog:$(GIT_CHANGELOG_VERSION) -p)
+			gh release create "$(NEXT_TAG)" -t "$(NEXT_TAG)" --notes "$${CHANGELOG}"
+		else
+			1>&2 echo "No commits triggered a new release"
+		fi
 	else
-		1>&2 echo "No tag present"
-		1>&2 echo "Abort"
-		exit 1
+	 1>&2 echo "No release to create"
 	fi
 
 
 CHANGELOG.md: .FORCE
-	if [[ -z "$${NEXT_TAG:-}" ]];then
-		printf '%s\n' "##### Update $@ (version: 'Unreleased' ) #####"
-		docker run --rm -e CHANGELOG_TAG="$${NEXT_TAG:-}" -v $$PWD:/git rockandska/git-changelog:$(GIT_CHANGELOG_VERSION)
-		if ! git ls-files --error-unmatch $@ > /dev/null 2>&1 || ! git diff --exit-code $@ > /dev/null 2>&1;then
-			printf '%s\n' "##### Commit changes #####"
-			git add $@
-			git commit -q -m "Changelog update [skip ci]"
+	printf '%s\n' "*** Updating $@ ***"
+	if [[ -n "$(NEXT_TAG)" ]];then
+		if [[ "$(NEXT_TAG)" != "$(LAST_TAG)" ]];then
+			1>&2 echo "Adding version: '$(NEXT_TAG)' ) ***"
+			docker run --rm -e CHANGELOG_TAG="$(NEXT_TAG)" -v $(CURDIR):/git rockandska/git-changelog:$(GIT_CHANGELOG_VERSION)
+		else
+			1>&2 echo "No commits triggered a new release"
 		fi
 	else
-		printf '%s\n' "##### Update $@ (version: '$$NEXT_TAG' ) #####"
-		docker run --rm -e CHANGELOG_TAG="$${NEXT_TAG:-}" -v $$PWD:/git rockandska/git-changelog:$(GIT_CHANGELOG_VERSION)
-	fi
-
-.PHONY: tag
-.SECONDARY: tag
-tag: check-git-clean
-	if [[ -n "$${NEXT_TAG:-}" ]];then
-		printf '%s\n' "##### Add tag '$$NEXT_TAG' #####"
-		git tag -m "$${NEXT_TAG}" "$${NEXT_TAG}"
+	 1>&2 echo "No release to create"
 	fi
 
 .SECONDARY: .VERSION
 .VERSION: .FORCE
-	if [[ -n "$${NEXT_TAG:-}" ]];then
-		echo "$${NEXT_TAG}" > $@
-		printf '%s\n' "##### $@ updated with '$${NEXT_TAG}' #####"
+	printf '%s\n' "*** Updating $@ ***"
+	if [[ -n "$(NEXT_TAG)" ]];then
+		if [[ "$(NEXT_TAG)" != "$(LAST_TAG)" ]];then
+			1>&2 echo "Adding version: '$(NEXT_TAG)' ) ***"
+			echo "$(NEXT_TAG)" > $@
+		else
+			1>&2 echo "No commits triggered a new release"
+		fi
+	else
+		1>&2 echo "No tag to update"
 	fi
 
 .PHONY: build
-build: | venv
-	printf '%s\n' "##### Build #####"
-	$(VENV_DIR)/bin/poetry lock --check
-	$(VENV_DIR)/bin/poetry build
+build: venv
+	printf '%s\n' "*** Making build ***"
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) lock --check
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) build
 
 .PHONY: publish
-publish: build
-	CURRENT_TAG=$$(git tag --points-at)
-	if [[ "$${CURRENT_TAG:-}" ]];then
-		echo "Publishing release '$${CURRENT_TAG:-}'"
-		$(VENV_DIR)/bin/poetry publish
+.SECONDARY: publish
+publish: tag-release
+	echo "*** Publishing release ***"
+	if [[ -n "$(NEXT_TAG)" ]];then
+		if [[ "$(NEXT_TAG)" != "$(LAST_TAG)" ]];then
+			1>&2 echo "Publishing version: '$(NEXT_TAG)' ) ***"
+			$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) publish
+			:
+		else
+			1>&2 echo "No commits triggered a new release"
+		fi
 	else
-		1>&2 echo "No tag present"
-		1>&2 echo "Abort"
-		exit 1
+		1>&2 echo "No tag to publish"
 	fi
 
 .PHONY: check-git-clean
 .SECONDARY: check-git-clean
 check-git-clean:
-	if ! output=$$(git status --porcelain 2>&1) || [ -n "$${output}" ];then
-		1>&2 echo "Git workingtree is not clean"
+	if ! output=$$(git ls-files --others --exclude-standard 2>&1) || [ -n "$${output}" ];then
+		1>&2 echo "Error: Git workingtree is not clean"
 		exit 1
 	fi
 
 .PHONY: docs-serve
-docs-serve: pyproject.toml | venv
-	$(VENV_DIR)/bin/poetry lock --check
-	$(VENV_DIR)/bin/poetry install --only docs
-	$(VENV_DIR)/bin/poetry run mkdocs serve
+docs-serve: pyproject.toml venv
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) lock --check
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) install --only docs
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) run mkdocs serve
 
 .PHONY: docs
-docs: pyproject.toml | venv
-	$(VENV_DIR)/bin/poetry lock --check
-	$(VENV_DIR)/bin/poetry install --only docs
-	$(VENV_DIR)/bin/poetry run mkdocs build
+docs: pyproject.toml venv
+	printf '%s\n' "*** Making docs ***"
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) lock --check
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) install --only docs
+	$(VENV_DIR)/bin/poetry $(if $(DEBUG),,--quiet) run mkdocs build
 
 
 ##############
 # Templates
 ##############
 
+.SECONDARY: tox.ini
 tox.ini: tox.ini.j2 | venv
-	$(info ### Generating $@ from $<... ###)
+	echo "*** Generating $@ from $<... ***"
 	$(VENV_DIR)/bin/jinja2 -o $@ $< -D base_python_version="$(BASE_PYTHON_VERSION)" -D python_versions="$(PYTHON_VERSIONS)"
 
-pyproject.toml: pyproject.toml.j2 .FORCE | venv
-	$(info ### Generating $@ from $<... ###)
+.SECONDARY: pyproject.toml
+pyproject.toml: pyproject.toml.j2 .VERSION | venv
+	echo "*** Generating $@ from $<... ***"
 	CURRENT_VERSION=$$(<".VERSION")
 	$(VENV_DIR)/bin/jinja2 -o $@ $< -D version="$$CURRENT_VERSION" -D python_versions="$(PYTHON_VERSIONS)"
 
-$(GHA_TEMPLATES): %.yml: %.yml.j2 $(GHA_TEMPLATES_INC) tox.ini.j2 .FORCE | venv
-	$(info ### Generating $@ from $<... ###)
+.SECONDARY: $(GHA_TEMPLATES)
+$(GHA_TEMPLATES): tox.ini.j2 | venv
+	echo "*** Generating $@ from $<... ***"
 	mkdir -p $(@D)
 	$(VENV_DIR)/bin/jinja2 -o $@ $< -D tests_targets="$(TESTS_TARGETS)" -D tox_targets_prefix="$(TEST_TOX_TARGETS_PREFIX)" -D base_python_version="$(BASE_PYTHON_VERSION)"
 
 .PHONY: clean
 clean:
 	git clean -xdf
+
+# invoking make V=1 will print everything
+.PHONY: $(V).SILENT
+$(V).SILENT:
+

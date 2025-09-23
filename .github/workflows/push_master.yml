@@ -21,11 +21,9 @@ jobs:
 
 
 
-
   Tests:
     needs: pyenv
     runs-on: *UBUNTU_IMAGE
-
     strategy:
       matrix:
         target:
@@ -34,15 +32,11 @@ jobs:
           - test-tox-black
           - test-tox-isort
           - test-tox-flake8
-          - test-tox-py3.7-mypy
+          - test-tox-mypy
           - test-tox-py3.7-pytest
-          - test-tox-py3.8-mypy
           - test-tox-py3.8-pytest
-          - test-tox-py3.9-mypy
           - test-tox-py3.9-pytest
-          - test-tox-py3.10-mypy
           - test-tox-py3.10-pytest
-          - test-tox-py3.11-mypy
           - test-tox-py3.11-pytest
           
 
@@ -77,6 +71,9 @@ jobs:
         run: make check-git-clean
 
 
+
+
+    
   Release:
     if: contains(github.event.head_commit.message, '[make release]')
     needs: Tests
@@ -140,9 +137,6 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-      - name: Fetch tags
-        run: |
-          git fetch --prune --unshallow --tags
       - name: make CHANGELOG.md
         run: |
           make CHANGELOG.md

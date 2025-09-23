@@ -9,7 +9,8 @@ envlist =
     black
     isort
     flake8
-    py{ {{ pvs }} }-{ mypy, pytest }
+    mypy
+    py{ {{ pvs }} }-pytest
 
 [testenv:py{ {{ pvs }} }-pytest]
 skip_install = True
@@ -19,15 +20,6 @@ commands =
     poetry lock --check
     poetry install --only main,test
     poetry run pytest {posargs} tests/
-
-[testenv:py{ {{ pvs }} }-mypy]
-skip_install = True
-allowlist_externals = poetry
-commands =
-    python --version
-    poetry lock --check
-    poetry install --only main,test,type
-    poetry run mypy {posargs} pytest_tmux/ tests/
 
 [testenv:flake8]
 skip_install = True
@@ -47,8 +39,6 @@ commands =
     poetry lock --check
     poetry install --only main,test,type
     poetry run mypy {posargs} pytest_tmux/ tests/
-    poetry install --only main,test,lint
-    poetry run flake8 {posargs} pytest_tmux/ tests/
 
 
 [testenv:{black, isort}]

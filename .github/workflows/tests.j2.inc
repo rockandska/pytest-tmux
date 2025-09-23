@@ -1,8 +1,6 @@
-{% raw %}
   Tests:
     needs: pyenv
     runs-on: *UBUNTU_IMAGE
-{% endraw %}
     strategy:
       matrix:
         target:

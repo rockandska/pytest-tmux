@@ -17,9 +17,8 @@ jobs:
 
 {% include 'tests.j2.inc' %}
 
-{%- raw %}
+{% raw %}
   Release:
-    if: contains(github.event.head_commit.message, '[make release]')
     needs: Tests
     runs-on: *UBUNTU_IMAGE
     steps:
@@ -48,46 +47,35 @@ jobs:
           git fetch --prune --unshallow --tags
 
       - name: make release
+        if: contains(github.event.head_commit.message, '[make release]')
         run: |
           eval "$(pyenv init -)"
           pyenv rehash
           make release
-
-      - name: Push back CHANGELOG and tag
-        run: |
-          git push --follow-tags
-
-      - name: Create GH release
-        run: |
-          make release-gh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+          CI: True
 
-      - name: make publish
+      - name: make prerelease
+        if: contains(github.event.head_commit.message, '[make prerelease]')
         run: |
           eval "$(pyenv init -)"
           pyenv rehash
-          make publish
+          make prerelease
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+          CI: True
 
-  Changelog:
-    if: always() && ! contains(github.event.head_commit.message, '[make release]')
-    needs: Tests
-    runs-on: *UBUNTU_IMAGE
-    steps:
-      - uses: actions/checkout@v2
-      - name: Configure git
+      - name: make unrelease
+        if: |
+          ! contains(github.event.head_commit.message, '[make prerelease]')
+          && ! contains(github.event.head_commit.message, '[make release]')
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-      - name: Fetch tags
-        run: |
-          git fetch --prune --unshallow --tags
-      - name: make CHANGELOG.md
-        run: |
-          make CHANGELOG.md
-      - name: Push back CHANGELOG
-        run: |
-          git push
+          eval "$(pyenv init -)"
+          pyenv rehash
+          make unrelease
+        env:
+          CI: True
 {% endraw %}
